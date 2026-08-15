@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pencatatan Opsen PKB & BBNKB - BAPENDA Paser</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2647">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Opsen PKB/BBNKB">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#0f2647;
+    --navy2:#173763;
+    --gold:#c8952c;
+    --paper:#f6f4ee;
+    --ink:#1c2430;
+    --line:#dcd6c8;
+    --green:#2f6b4f;
+    --red:#a8352b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy),var(--navy2));
+    color:#fff;
+    padding:20px 18px;
+  }
+  header h1{margin:0 0 4px 0;font-size:1.25rem;letter-spacing:.3px;}
+  header p{margin:0;font-size:.8rem;opacity:.85;}
+  .wrap{max-width:920px;margin:0 auto;padding:16px;}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .tab-btn{
+    flex:1 1 calc(50% - 8px);min-width:130px;padding:10px;border:none;border-radius:8px 8px 0 0;
+    background:#e4dfd0;color:var(--navy);font-weight:600;cursor:pointer;font-size:.8rem;
+  }
+  .tab-btn.active{background:var(--paper);color:var(--navy);border-bottom:3px solid var(--gold);}
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:18px;margin-bottom:16px;
+  }
+  .section-title{
+    font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--gold);font-weight:700;margin:0 0 12px 0;
+    border-bottom:1px solid var(--line);padding-bottom:6px;
+  }
+  label{display:block;font-size:.82rem;font-weight:600;margin:12px 0 4px 0;color:var(--navy);}
+  input,select,textarea{
+    width:100%;padding:9px 10px;border:1px solid #c9c2ae;border-radius:6px;
+    font-size:.9rem;font-family:inherit;background:#fdfcf9;
+  }
+  textarea{resize:vertical;min-height:56px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media(max-width:560px){.row2,.row3{grid-template-columns:1fr;} .tab-btn{flex:1 1 100%;}}
+  .btn{
+    display:inline-block;padding:10px 16px;border:none;border-radius:6px;
+    font-weight:700;font-size:.85rem;cursor:pointer;margin-top:8px;
+  }
+  .btn-gold{background:var(--gold);color:#fff;}
+  .btn-navy{background:var(--navy);color:#fff;}
+  .btn-outline{background:#fff;border:1px solid var(--navy);color:var(--navy);}
+  .btn-red{background:var(--red);color:#fff;}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;}
+  th{background:var(--navy);color:#fff;font-size:.72rem;text-transform:uppercase;}
+  tr:nth-child(even){background:#faf8f2;}
+  .empty{text-align:center;color:#888;padding:30px 0;font-size:.85rem;}
+  .del-btn{background:var(--red);color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:.72rem;cursor:pointer;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .count-badge{background:var(--navy);color:#fff;font-size:.72rem;padding:3px 10px;border-radius:12px;}
+  .toast{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;
+    font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;
+  }
+  .toast.show{opacity:1;}
+  .table-scroll{overflow-x:auto;}
+  .calc-box{
+    background:#eef4f0;border:1px solid #cfe3d6;border-radius:8px;
+    padding:12px;margin-top:12px;font-size:.82rem;
+  }
+  .calc-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #cfe3d6;}
+  .calc-row:last-child{border-bottom:none;font-weight:700;color:var(--red);padding-top:6px;}
+  .total-bar{
+    background:var(--navy);color:#fff;padding:10px 14px;border-radius:8px;
+    display:flex;justify-content:space-between;font-weight:700;margin-top:10px;font-size:.9rem;
+  }
+  .badge-pkb{background:#e6eef7;color:var(--navy);font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:700;}
+  .badge-bbnkb{background:#f7ecd9;color:#8a5a0c;font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:700;}
+  .filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .filter-row .field{flex:1;min-width:140px;}
+  .hint-note{font-size:.72rem;color:#888;margin:4px 0 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚗 Opsen PKB &amp; BBNKB</h1>
+  <p>BAPENDA Kabupaten Paser — pencatatan bagian Kabupaten/Kota atas Opsen PKB &amp; BBNKB, dengan laporan bulanan &amp; tahunan</p>
+  <button id="installBtn" onclick="installApp()" style="display:none;margin-top:10px;background:#c8952c;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:700;font-size:.8rem;cursor:pointer;">⬇ Install Aplikasi ke HP</button>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('catat')" id="tabBtnCatat">+ Catat</button>
+    <button class="tab-btn" onclick="switchTab('riwayat')" id="tabBtnRiwayat">📋 Riwayat</button>
+    <button class="tab-btn" onclick="switchTab('bulanan')" id="tabBtnBulanan">🗓️ Laporan Bulanan</button>
+    <button class="tab-btn" onclick="switchTab('tahunan')" id="tabBtnTahunan">📆 Laporan Tahunan</button>
+  </div>
+
+  <!-- CATAT TAB -->
+  <div id="tabCatat">
+    <div class="card">
+      <p class="section-title">Perhitungan Opsen</p>
+      <div class="row2">
+        <div>
+          <label>Wilayah Kabupaten/Kota</label>
+          <select id="fWilayah"></select>
+        </div>
+        <div>
+          <label>Jenis Pajak</label>
+          <select id="fJenisPajak" onchange="recalcPreview()">
+            <option value="PKB">PKB (Pajak Kendaraan Bermotor)</option>
+            <option value="BBNKB">BBNKB (Bea Balik Nama Kendaraan Bermotor)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Periode Laporan (Bulan)</label>
+          <input type="month" id="fPeriode">
+        </div>
+        <div>
+          <label>Tanggal Pencatatan</label>
+          <input type="date" id="fTanggal">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Pokok Pajak Terutang di Provinsi (Rp)</label>
+          <input type="number" id="fPokok" min="0" step="1000" placeholder="Contoh: 1500000" oninput="recalcPreview()">
+        </div>
+        <div>
+          <label>Tarif Opsen (%)</label>
+          <input type="number" id="fTarif" min="0" max="100" step="0.1" value="66" oninput="recalcPreview()">
+        </div>
+      </div>
+
+      <div class="calc-box" id="calcBox" style="display:none;"></div>
+
+      <label>Catatan (opsional)</label>
+      <textarea id="fCatatan" placeholder="Nomor bukti setor, referensi, dsb."></textarea>
+
+      <div class="actions">
+        <button class="btn btn-navy" onclick="saveRecord()">💾 Simpan Catatan Opsen</button>
+        <button class="btn btn-outline" onclick="resetForm()">Bersihkan Form</button>
+      </div>
+    </div>
+    <p style="font-size:.72rem;color:#888;text-align:center;">Rumus: Opsen Kabupaten/Kota = Pokok Pajak Terutang (PKB/BBNKB di Provinsi) × Tarif Opsen. Dasar hukum: UU No. 1 Tahun 2022 tentang HKPD &amp; PP No. 35 Tahun 2023 — tarif Opsen PKB dan BBNKB ditetapkan sebesar 66% dari pajak terutang yang dipungut Provinsi, disetorkan langsung menjadi pendapatan Kabupaten/Kota tempat kendaraan terdaftar.</p>
+  </div>
+
+  <!-- RIWAYAT TAB -->
+  <div id="tabRiwayat" style="display:none;">
+    <div class="card">
+      <div class="toolbar">
+        <span class="count-badge" id="countBadge">0 Catatan</span>
+        <div class="actions" style="margin:0;">
+          <button class="btn btn-gold" onclick="exportExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="field">
+          <label style="margin:0 0 4px;">Filter Bulan</label>
+          <input type="month" id="filterBulan" onchange="renderRiwayat()">
+        </div>
+        <div class="field">
+          <label style="margin:0 0 4px;">Filter Wilayah</label>
+          <select id="filterWilayah" onchange="renderRiwayat()"></select>
+        </div>
+        <div class="field">
+          <label style="margin:0 0 4px;">Filter Jenis Pajak</label>
+          <select id="filterJenis" onchange="renderRiwayat()">
+            <option value="">Semua</option>
+            <option value="PKB">PKB</option>
+            <option value="BBNKB">BBNKB</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th><th>Wilayah</th><th>Jenis</th>
+              <th>Pokok Pajak</th><th>Tarif</th><th>Opsen Diterima</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="riwayatBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyRiwayat" class="empty" style="display:none;">Belum ada catatan tersimpan.</div>
+      <div class="total-bar" id="riwayatTotalBar" style="display:none;">
+        <span>TOTAL OPSEN (SESUAI FILTER)</span>
+        <span id="riwayatTotalValue">Rp 0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAPORAN BULANAN TAB -->
+  <div id="tabBulanan" style="display:none;">
+    <div class="card">
+      <p class="section-title">Laporan Bulanan</p>
+      <div class="filter-row">
+        <div class="field">
+          <label style="margin:0 0 4px;">Tahun</label>
+          <select id="lapTahun" onchange="renderBulanan()"></select>
+        </div>
+        <div class="field">
+          <label style="margin:0 0 4px;">Wilayah</label>
+          <select id="lapWilayahBulanan" onchange="renderBulanan()"></select>
+        </div>
+        <div class="actions" style="margin:0;align-self:flex-end;">
+          <button class="btn btn-gold" onclick="exportBulananExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Bulan</th><th>Jumlah</th><th>Opsen PKB</th><th>Opsen BBNKB</th><th>Total Opsen</th></tr>
+          </thead>
+          <tbody id="bulananBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyBulanan" class="empty" style="display:none;">Belum ada data untuk tahun/wilayah ini.</div>
+      <div class="total-bar" id="bulananTotalBar" style="display:none;">
+        <span>TOTAL OPSEN TAHUN INI</span>
+        <span id="bulananTotalValue">Rp 0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAPORAN TAHUNAN TAB -->
+  <div id="tabTahunan" style="display:none;">
+    <div class="card">
+      <p class="section-title">Laporan Tahunan</p>
+      <div class="filter-row">
+        <div class="field">
+          <label style="margin:0 0 4px;">Wilayah</label>
+          <select id="lapWilayahTahunan" onchange="renderTahunan()"></select>
+        </div>
+        <div class="actions" style="margin:0;align-self:flex-end;">
+          <button class="btn btn-gold" onclick="exportTahunanExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Tahun</th><th>Jumlah</th><th>Opsen PKB</th><th>Opsen BBNKB</th><th>Total Opsen</th></tr>
+          </thead>
+          <tbody id="tahunanBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyTahunan" class="empty" style="display:none;">Belum ada data yang bisa direkap.</div>
+      <div class="total-bar" id="tahunanTotalBar" style="display:none;">
+        <span>TOTAL OPSEN SEMUA TAHUN</span>
+        <span id="tahunanTotalValue">Rp 0</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== PARAMETER OPSEN PKB & BBNKB (UU No.1/2022 HKPD & PP No.35/2023) =====================
+// Opsen Kabupaten/Kota = Pokok Pajak Terutang (dipungut Provinsi) x Tarif Opsen (66%)
+const DEFAULT_TARIF_OPSEN = 66; // persen
+
+const WILAYAH_KABKOTA = [
+  "Kabupaten Paser",
+  "Kabupaten Kutai Barat",
+  "Kabupaten Kutai Kartanegara",
+  "Kabupaten Kutai Timur",
+  "Kabupaten Berau",
+  "Kabupaten Penajam Paser Utara",
+  "Kabupaten Mahakam Ulu",
+  "Kota Balikpapan",
+  "Kota Samarinda",
+  "Kota Bontang"
+];
+
+let records = [];
+
+function populateWilayahSelects(){
+  const opts = WILAYAH_KABKOTA.map(w=>`<option value="${w}">${w}</option>`).join('');
+  document.getElementById('fWilayah').innerHTML = opts;
+  document.getElementById('fWilayah').value = "Kabupaten Paser";
+  document.getElementById('filterWilayah').innerHTML = '<option value="">Semua Wilayah</option>' + opts;
+  document.getElementById('lapWilayahBulanan').innerHTML = '<option value="">Semua Wilayah</option>' + opts;
+  document.getElementById('lapWilayahTahunan').innerHTML = '<option value="">Semua Wilayah</option>' + opts;
+}
+
+function switchTab(tab){
+  document.getElementById('tabCatat').style.display = tab==='catat' ? 'block':'none';
+  document.getElementById('tabRiwayat').style.display = tab==='riwayat' ? 'block':'none';
+  document.getElementById('tabBulanan').style.display = tab==='bulanan' ? 'block':'none';
+  document.getElementById('tabTahunan').style.display = tab==='tahunan' ? 'block':'none';
+  document.getElementById('tabBtnCatat').classList.toggle('active', tab==='catat');
+  document.getElementById('tabBtnRiwayat').classList.toggle('active', tab==='riwayat');
+  document.getElementById('tabBtnBulanan').classList.toggle('active', tab==='bulanan');
+  document.getElementById('tabBtnTahunan').classList.toggle('active', tab==='tahunan');
+  if(tab==='riwayat') renderRiwayat();
+  if(tab==='bulanan') renderBulanan();
+  if(tab==='tahunan') renderTahunan();
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function formatRupiah(n){
+  if(isNaN(n)) return 'Rp 0';
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+}
+
+function bulanNama(m){
+  const names = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  return names[m];
+}
+
+function formatPeriode(p){
+  if(!p) return '-';
+  const [y,m] = p.split('-');
+  return bulanNama(parseInt(m,10)-1) + ' ' + y;
+}
+
+function escapeHtml(str){
+  if(!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ----- perhitungan -----
+function calcOpsen(pokok, tarifPersen){
+  const pokokNum = parseFloat(pokok) || 0;
+  const tarifNum = parseFloat(tarifPersen);
+  const tarif = isNaN(tarifNum) ? DEFAULT_TARIF_OPSEN : tarifNum;
+  const opsen = pokokNum * (tarif/100);
+  return { pokok: pokokNum, tarif, opsen };
+}
+
+function recalcPreview(){
+  const pokok = document.getElementById('fPokok').value;
+  const tarif = document.getElementById('fTarif').value;
+  const box = document.getElementById('calcBox');
+  if(!pokok){
+    box.style.display = 'none';
+    return;
+  }
+  const r = calcOpsen(pokok, tarif);
+  const jenis = document.getElementById('fJenisPajak').value;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="calc-row"><span>Jenis Pajak</span><span>${jenis}</span></div>
+    <div class="calc-row"><span>Pokok Pajak (Provinsi)</span><span>${formatRupiah(r.pokok)}</span></div>
+    <div class="calc-row"><span>Tarif Opsen</span><span>${r.tarif}%</span></div>
+    <div class="calc-row"><span>OPSEN DITERIMA KAB/KOTA</span><span>${formatRupiah(r.opsen)}</span></div>
+  `;
+}
+
+// ----- penyimpanan -----
+function loadRecords(){
+  try{
+    const raw = localStorage.getItem('opsen-pkb-bbnkb-records-v1');
+    records = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    console.error('Gagal load data', e);
+    records = [];
+  }
+}
+
+function persistRecords(){
+  try{
+    localStorage.setItem('opsen-pkb-bbnkb-records-v1', JSON.stringify(records));
+  }catch(e){
+    console.error('Gagal menyimpan', e);
+    showToast('⚠️ Gagal menyimpan data. Memori penyimpanan mungkin penuh.');
+  }
+}
+
+function saveRecord(){
+  const periode = document.getElementById('fPeriode').value;
+  const pokok = document.getElementById('fPokok').value;
+  if(!periode){
+    showToast('⚠️ Pilih periode laporan dulu.');
+    return;
+  }
+  if(!pokok){
+    showToast('⚠️ Isi pokok pajak terutang dulu.');
+    return;
+  }
+  const tarif = document.getElementById('fTarif').value;
+  const calc = calcOpsen(pokok, tarif);
+
+  const rec = {
+    id: Date.now().toString(),
+    wilayah: document.getElementById('fWilayah').value,
+    jenisPajak: document.getElementById('fJenisPajak').value,
+    periode,
+    tanggal: document.getElementById('fTanggal').value,
+    catatan: document.getElementById('fCatatan').value.trim(),
+    calc
+  };
+  records.unshift(rec);
+  persistRecords();
+  showToast('✔ Tersimpan · Opsen ' + rec.jenisPajak + ': ' + formatRupiah(calc.opsen));
+  resetForm();
+  switchTab('riwayat');
+}
+
+function resetForm(){
+  ['fPeriode','fPokok','fCatatan'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fWilayah').value = 'Kabupaten Paser';
+  document.getElementById('fJenisPajak').value = 'PKB';
+  document.getElementById('fTarif').value = DEFAULT_TARIF_OPSEN;
+  document.getElementById('calcBox').style.display = 'none';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('fTanggal').value = today;
+}
+
+// ----- Riwayat -----
+function getFilteredRecords(){
+  let list = records.slice();
+  const fb = document.getElementById('filterBulan').value;
+  const fw = document.getElementById('filterWilayah').value;
+  const fj = document.getElementById('filterJenis').value;
+  if(fb) list = list.filter(r => r.periode === fb);
+  if(fw) list = list.filter(r => r.wilayah === fw);
+  if(fj) list = list.filter(r => r.jenisPajak === fj);
+  return list.sort((a,b)=> b.tanggal.localeCompare(a.tanggal));
+}
+
+function renderRiwayat(){
+  const body = document.getElementById('riwayatBody');
+  const empty = document.getElementById('emptyRiwayat');
+  const badge = document.getElementById('countBadge');
+  const bar = document.getElementById('riwayatTotalBar');
+  const list = getFilteredRecords();
+  badge.textContent = list.length + ' Catatan';
+
+  if(list.length===0){
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    bar.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  body.innerHTML = list.map(r=>`
+    <tr>
+      <td>${r.tanggal||'-'}<br><small>${formatPeriode(r.periode)}</small></td>
+      <td>${escapeHtml(r.wilayah)}</td>
+      <td><span class="${r.jenisPajak==='PKB'?'badge-pkb':'badge-bbnkb'}">${r.jenisPajak}</span></td>
+      <td>${formatRupiah(r.calc.pokok)}</td>
+      <td>${r.calc.tarif}%</td>
+      <td>${formatRupiah(r.calc.opsen)}</td>
+      <td><button class="del-btn" onclick="deleteRecord('${r.id}')">Hapus</button></td>
+    </tr>
+  `).join('');
+  const total = list.reduce((s,r)=>s+r.calc.opsen,0);
+  bar.style.display = 'flex';
+  document.getElementById('riwayatTotalValue').textContent = formatRupiah(total);
+}
+
+function deleteRecord(id){
+  if(!confirm('Hapus catatan ini?')) return;
+  records = records.filter(r=>r.id!==id);
+  persistRecords();
+  renderRiwayat();
+  renderBulanan();
+  renderTahunan();
+  showToast('Catatan dihapus.');
+}
+
+function exportExcel(){
+  const list = getFilteredRecords();
+  if(list.length===0){
+    showToast('Belum ada data untuk diekspor.');
+    return;
+  }
+  const rows = list.map(r=>({
+    'Tanggal': r.tanggal,
+    'Periode Laporan': formatPeriode(r.periode),
+    'Wilayah Kabupaten/Kota': r.wilayah,
+    'Jenis Pajak': r.jenisPajak,
+    'Pokok Pajak Provinsi (Rp)': Math.round(r.calc.pokok),
+    'Tarif Opsen': r.calc.tarif+'%',
+    'Opsen Diterima Kab/Kota (Rp)': Math.round(r.calc.opsen),
+    'Catatan': r.catatan
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = Object.keys(rows[0]).map(k=>({wch: Math.max(14, Math.min(32, k.length+4))}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Riwayat Opsen');
+  XLSX.writeFile(wb, 'riwayat-opsen-pkb-bbnkb-' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ----- Laporan Bulanan -----
+function availableYears(){
+  const years = new Set(records.filter(r=>r.periode).map(r => r.periode.slice(0,4)));
+  years.add(String(new Date().getFullYear()));
+  return Array.from(years).sort((a,b)=> b.localeCompare(a));
+}
+
+function populateYearSelect(){
+  const sel = document.getElementById('lapTahun');
+  const years = availableYears();
+  const cur = sel.value;
+  sel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value = years.includes(cur) ? cur : years[0];
+}
+
+function renderBulanan(){
+  populateYearSelect();
+  const year = document.getElementById('lapTahun').value;
+  const wilayah = document.getElementById('lapWilayahBulanan').value;
+  let list = records.filter(r => r.periode && r.periode.slice(0,4)===year);
+  if(wilayah) list = list.filter(r => r.wilayah === wilayah);
+
+  const byMonth = {};
+  for(let m=0;m<12;m++) byMonth[m] = {count:0, pkb:0, bbnkb:0};
+  list.forEach(r=>{
+    const m = parseInt(r.periode.slice(5,7),10) - 1;
+    byMonth[m].count++;
+    if(r.jenisPajak==='PKB') byMonth[m].pkb += r.calc.opsen;
+    else byMonth[m].bbnkb += r.calc.opsen;
+  });
+
+  const body = document.getElementById('bulananBody');
+  const empty = document.getElementById('emptyBulanan');
+  const bar = document.getElementById('bulananTotalBar');
+  body.innerHTML = '';
+  let totalAll=0, anyData=false;
+  for(let m=0;m<12;m++){
+    const d = byMonth[m];
+    if(d.count===0) continue;
+    anyData = true;
+    const total = d.pkb + d.bbnkb;
+    totalAll += total;
+    body.innerHTML += `<tr><td>${bulanNama(m)} ${year}</td><td>${d.count}</td><td>${formatRupiah(d.pkb)}</td><td>${formatRupiah(d.bbnkb)}</td><td>${formatRupiah(total)}</td></tr>`;
+  }
+  if(anyData){
+    empty.style.display = 'none';
+    bar.style.display = 'flex';
+    document.getElementById('bulananTotalValue').textContent = formatRupiah(totalAll);
+  } else {
+    empty.style.display = 'block';
+    bar.style.display = 'none';
+  }
+}
+
+function exportBulananExcel(){
+  const year = document.getElementById('lapTahun').value;
+  const wilayah = document.getElementById('lapWilayahBulanan').value;
+  let list = records.filter(r => r.periode && r.periode.slice(0,4)===year);
+  if(wilayah) list = list.filter(r => r.wilayah === wilayah);
+
+  const byMonth = {};
+  for(let m=0;m<12;m++) byMonth[m] = {count:0, pkb:0, bbnkb:0};
+  list.forEach(r=>{
+    const m = parseInt(r.periode.slice(5,7),10) - 1;
+    byMonth[m].count++;
+    if(r.jenisPajak==='PKB') byMonth[m].pkb += r.calc.opsen;
+    else byMonth[m].bbnkb += r.calc.opsen;
+  });
+  const rows = [];
+  for(let m=0;m<12;m++){
+    const d = byMonth[m];
+    rows.push({
+      'Bulan': bulanNama(m) + ' ' + year,
+      'Jumlah Catatan': d.count,
+      'Opsen PKB (Rp)': Math.round(d.pkb),
+      'Opsen BBNKB (Rp)': Math.round(d.bbnkb),
+      'Total Opsen (Rp)': Math.round(d.pkb + d.bbnkb)
+    });
+  }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:18},{wch:16},{wch:16},{wch:16},{wch:16}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan Bulanan ' + year);
+  XLSX.writeFile(wb, 'laporan-bulanan-opsen-' + year + (wilayah ? '-'+wilayah.replace(/\s+/g,'_') : '') + '.xlsx');
+}
+
+// ----- Laporan Tahunan -----
+function renderTahunan(){
+  const wilayah = document.getElementById('lapWilayahTahunan').value;
+  let list = records.filter(r => r.periode);
+  if(wilayah) list = list.filter(r => r.wilayah === wilayah);
+
+  const byYear = {};
+  list.forEach(r=>{
+    const y = r.periode.slice(0,4);
+    if(!byYear[y]) byYear[y] = {count:0, pkb:0, bbnkb:0};
+    byYear[y].count++;
+    if(r.jenisPajak==='PKB') byYear[y].pkb += r.calc.opsen;
+    else byYear[y].bbnkb += r.calc.opsen;
+  });
+  const years = Object.keys(byYear).sort((a,b)=> b.localeCompare(a));
+
+  const body = document.getElementById('tahunanBody');
+  const empty = document.getElementById('emptyTahunan');
+  const bar = document.getElementById('tahunanTotalBar');
+  body.innerHTML = '';
+  let totalAll=0;
+  years.forEach(y=>{
+    const d = byYear[y];
+    const total = d.pkb + d.bbnkb;
+    totalAll += total;
+    body.innerHTML += `<tr><td>${y}</td><td>${d.count}</td><td>${formatRupiah(d.pkb)}</td><td>${formatRupiah(d.bbnkb)}</td><td>${formatRupiah(total)}</td></tr>`;
+  });
+  if(years.length){
+    empty.style.display = 'none';
+    bar.style.display = 'flex';
+    document.getElementById('tahunanTotalValue').textContent = formatRupiah(totalAll);
+  } else {
+    empty.style.display = 'block';
+    bar.style.display = 'none';
+  }
+}
+
+function exportTahunanExcel(){
+  const wilayah = document.getElementById('lapWilayahTahunan').value;
+  let list = records.filter(r => r.periode);
+  if(wilayah) list = list.filter(r => r.wilayah === wilayah);
+
+  const byYear = {};
+  list.forEach(r=>{
+    const y = r.periode.slice(0,4);
+    if(!byYear[y]) byYear[y] = {count:0, pkb:0, bbnkb:0};
+    byYear[y].count++;
+    if(r.jenisPajak==='PKB') byYear[y].pkb += r.calc.opsen;
+    else byYear[y].bbnkb += r.calc.opsen;
+  });
+  const years = Object.keys(byYear).sort((a,b)=> a.localeCompare(b));
+  const rows = years.map(y=>({
+    'Tahun': y,
+    'Jumlah Catatan': byYear[y].count,
+    'Opsen PKB (Rp)': Math.round(byYear[y].pkb),
+    'Opsen BBNKB (Rp)': Math.round(byYear[y].bbnkb),
+    'Total Opsen (Rp)': Math.round(byYear[y].pkb + byYear[y].bbnkb)
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:16},{wch:16},{wch:16},{wch:16}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan Tahunan');
+  XLSX.writeFile(wb, 'laporan-tahunan-opsen' + (wilayah ? '-'+wilayah.replace(/\s+/g,'_') : '') + '.xlsx');
+}
+
+// init
+(function(){
+  populateWilayahSelects();
+  loadRecords();
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('fTanggal').value = today;
+  document.getElementById('fTarif').value = DEFAULT_TARIF_OPSEN;
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW gagal:', err));
+  });
+}
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  const installBtn = document.getElementById('installBtn');
+  if(installBtn) installBtn.style.display = 'inline-block';
+});
+
+function installApp(){
+  const installBtn = document.getElementById('installBtn');
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(()=>{
+      deferredPrompt = null;
+      if(installBtn) installBtn.style.display = 'none';
+    });
+  }
+}
+</script>
+</body>
+</html>
