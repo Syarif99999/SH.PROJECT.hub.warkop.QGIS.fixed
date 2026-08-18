@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pendataan Wajib Pajak MBLB - BAPENDA Paser</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2647">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WP MBLB">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#0f2647;
+    --navy2:#173763;
+    --gold:#c8952c;
+    --paper:#f6f4ee;
+    --ink:#1c2430;
+    --line:#dcd6c8;
+    --green:#2f6b4f;
+    --red:#a8352b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy),var(--navy2));
+    color:#fff;
+    padding:20px 18px;
+  }
+  header h1{margin:0 0 4px 0;font-size:1.25rem;letter-spacing:.3px;}
+  header p{margin:0;font-size:.8rem;opacity:.85;}
+  .home-link{display:inline-flex;align-items:center;gap:6px;min-height:38px;margin-bottom:12px;padding:8px 11px;border:1px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(255,255,255,.1);color:#fff;text-decoration:none;font-size:.76rem;font-weight:700;}
+  .home-link:hover{background:rgba(255,255,255,.18);}
+  .home-link:active{transform:scale(.97);}
+  .wrap{max-width:920px;margin:0 auto;padding:16px;}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .tab-btn{
+    flex:1 1 calc(50% - 8px);min-width:130px;padding:10px;border:none;border-radius:8px 8px 0 0;
+    background:#e4dfd0;color:var(--navy);font-weight:600;cursor:pointer;font-size:.8rem;
+  }
+  .tab-btn.active{background:var(--paper);color:var(--navy);border-bottom:3px solid var(--gold);}
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:18px;margin-bottom:16px;
+  }
+  .section-title{
+    font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--gold);font-weight:700;margin:0 0 12px 0;
+    border-bottom:1px solid var(--line);padding-bottom:6px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  label{display:block;font-size:.82rem;font-weight:600;margin:12px 0 4px 0;color:var(--navy);}
+  input,select,textarea{
+    width:100%;padding:9px 10px;border:1px solid #c9c2ae;border-radius:6px;
+    font-size:.9rem;font-family:inherit;background:#fdfcf9;
+  }
+  textarea{resize:vertical;min-height:60px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:560px){.row2{grid-template-columns:1fr;} .tab-btn{flex:1 1 100%;}}
+  .loc-box{
+    background:#f1ede1;border:1px dashed var(--gold);border-radius:8px;
+    padding:12px;margin-top:10px;
+  }
+  #map{height:220px;border-radius:8px;margin-top:10px;display:block;}
+  .btn{
+    display:inline-block;padding:10px 16px;border:none;border-radius:6px;
+    font-weight:700;font-size:.85rem;cursor:pointer;margin-top:8px;
+  }
+  .btn-gold{background:var(--gold);color:#fff;}
+  .btn-navy{background:var(--navy);color:#fff;}
+  .btn-outline{background:#fff;border:1px solid var(--navy);color:var(--navy);}
+  .btn-red{background:var(--red);color:#fff;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .coords{font-size:.8rem;color:var(--green);font-weight:600;margin-top:6px;}
+  .err{font-size:.8rem;color:var(--red);font-weight:600;margin-top:6px;}
+  .loading{font-size:.8rem;color:#888;margin-top:6px;}
+  .addr-auto{
+    font-size:.8rem;background:#eef4f0;border:1px solid #cfe3d6;border-radius:6px;
+    padding:8px 10px;margin-top:8px;color:var(--green);
+  }
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(15,38,71,.55);
+    z-index:1000;align-items:center;justify-content:center;padding:16px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff;border-radius:10px;padding:18px;max-width:380px;width:100%;max-height:90vh;overflow-y:auto;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700;}
+  .badge-lunas{background:#e2f3e8;color:var(--green);}
+  .badge-sebagian{background:#fbf1dc;color:#8a6414;}
+  .badge-belum{background:#fbe4e1;color:var(--red);}
+  .pay-btn{background:var(--green);color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:.72rem;cursor:pointer;margin-left:4px;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  @media(max-width:560px){.summary-grid{grid-template-columns:1fr;}}
+  .stat-card{background:#f1ede1;border:1px solid var(--line);border-radius:8px;padding:12px;}
+  .stat-card .stat-label{font-size:.7rem;text-transform:uppercase;color:#777;font-weight:700;}
+  .stat-card .stat-value{font-size:1.15rem;font-weight:700;color:var(--navy);margin-top:2px;}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;}
+  th{background:var(--navy);color:#fff;font-size:.72rem;text-transform:uppercase;}
+  tr:nth-child(even){background:#faf8f2;}
+  .empty{text-align:center;color:#888;padding:30px 0;font-size:.85rem;}
+  .del-btn{background:var(--red);color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:.72rem;cursor:pointer;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .count-badge{background:var(--navy);color:#fff;font-size:.72rem;padding:3px 10px;border-radius:12px;}
+  .toast{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;
+    font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;
+  }
+  .toast.show{opacity:1;}
+  .table-scroll{overflow-x:auto;}
+  .item-card{
+    background:#f6f4ee;border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+  }
+  .item-card .info{font-size:.8rem;line-height:1.5;}
+  .item-card .info b{color:var(--navy);}
+  .item-card .pajak{color:var(--red);font-weight:700;}
+  .calc-box{
+    background:#eef4f0;border:1px solid #cfe3d6;border-radius:8px;
+    padding:12px;margin-top:12px;font-size:.82rem;
+  }
+  .calc-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #cfe3d6;}
+  .calc-row:last-child{border-bottom:none;font-weight:700;color:var(--red);padding-top:6px;}
+  .total-bar{
+    background:var(--navy);color:#fff;padding:10px 14px;border-radius:8px;
+    display:flex;justify-content:space-between;font-weight:700;margin-top:10px;font-size:.9rem;
+  }
+  select#lapTahun{max-width:160px;}
+  .hint-note{font-size:.72rem;color:#888;margin:4px 0 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home-link" href="../index.html" aria-label="Kembali ke halaman awal WARKOP">← Kembali ke Halaman Awal</a>
+  <h1>⛏️ Pendataan Wajib Pajak MBLB</h1>
+  <p>BAPENDA Kabupaten Paser — biodata WP + peta alamat otomatis + tarif 20% + data potensi + laporan penerimaan, bulanan &amp; tahunan</p>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('form')" id="tabBtnForm">+ Input Data</button>
+    <button class="tab-btn" onclick="switchTab('list')" id="tabBtnList">📋 Daftar Data</button>
+    <button class="tab-btn" onclick="switchTab('potensi')" id="tabBtnPotensi">📈 Data Potensi</button>
+    <button class="tab-btn" onclick="switchTab('penerimaan')" id="tabBtnPenerimaan">💰 Laporan Penerimaan</button>
+    <button class="tab-btn" onclick="switchTab('bulanan')" id="tabBtnBulanan">🗓️ Laporan Bulanan</button>
+    <button class="tab-btn" onclick="switchTab('tahunan')" id="tabBtnTahunan">📆 Laporan Tahunan</button>
+  </div>
+
+  <!-- FORM TAB -->
+  <div id="tabForm">
+    <div class="card">
+      <p class="section-title">Data Wajib Pajak</p>
+      <div class="row2">
+        <div>
+          <label>Nama Wajib Pajak / Pemilik</label>
+          <input type="text" id="fNama" placeholder="Contoh: Ahmad Fauzi">
+        </div>
+        <div>
+          <label>NIK KTP</label>
+          <input type="text" id="fNik" maxlength="16" inputmode="numeric" placeholder="16 digit sesuai KTP">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Nama Usaha / Perusahaan Penambangan</label>
+          <input type="text" id="fBadanUsaha" placeholder="Contoh: CV Batu Paser Jaya">
+        </div>
+        <div>
+          <label>NPWPD (jika ada)</label>
+          <input type="text" id="fNpwpd" placeholder="Nomor Pokok Wajib Pajak Daerah">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>No. HP / Kontak</label>
+          <input type="text" id="fHp" placeholder="08xx-xxxx-xxxx">
+        </div>
+        <div>
+          <label>Jenis Izin</label>
+          <select id="fIzin">
+            <option value="IUP OP">IUP OP (Operasi Produksi)</option>
+            <option value="SIPB" selected>SIPB (Surat Izin Penambangan Batuan)</option>
+            <option value="Belum Berizin">Belum Berizin</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Nama Petugas Survei</label>
+          <input type="text" id="fPetugas" placeholder="Nama petugas yang input data ini">
+        </div>
+        <div>
+          <label>Kecamatan / Desa-Kelurahan</label>
+          <input type="text" id="fKec" placeholder="Contoh: Batu Sopang">
+        </div>
+      </div>
+      <label>Alamat / Lokasi Tambang <span style="color:#888;font-weight:400;">(terisi otomatis dari peta)</span></label>
+      <textarea id="fAlamat" placeholder="Ketuk/geser peta di bawah untuk mengisi otomatis, atau ketik manual"></textarea>
+
+      <div class="loc-box">
+        <label style="margin-top:0;">📍 Titik Lokasi Tambang</label>
+        <p style="font-size:.82rem;color:#555;margin:0 0 8px 0;"><strong>Ketuk titik di peta</strong> atau geser pin — alamat akan otomatis dicari dan diisikan ke kolom alamat di atas.</p>
+        <div class="row2">
+          <div>
+            <label style="margin-top:0;">Latitude (manual)</label>
+            <input type="number" id="fLatManual" step="0.000001" placeholder="Contoh: -1.945600" oninput="applyManualCoords()">
+          </div>
+          <div>
+            <label style="margin-top:0;">Longitude (manual)</label>
+            <input type="number" id="fLngManual" step="0.000001" placeholder="Contoh: 116.193700" oninput="applyManualCoords()">
+          </div>
+        </div>
+        <div id="locStatus"></div>
+        <div id="map"></div>
+        <button type="button" class="btn btn-outline" style="margin-top:8px;" onclick="getLocation()">📡 Ambil Lokasi GPS Saya Sekarang</button>
+        <p class="hint-note">Alamat otomatis memakai layanan OpenStreetMap (Nominatim) — perlu koneksi internet. Hasilnya perkiraan; sesuaikan manual bila kurang tepat.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Data Objek Pajak MBLB <span style="color:#888;font-weight:400;text-transform:none;">(bisa lebih dari 1 jenis/periode per WP)</span></p>
+      <div class="row2">
+        <div>
+          <label>Periode Laporan (Bulan)</label>
+          <input type="month" id="fPeriode">
+        </div>
+        <div>
+          <label>Jenis Mineral Bukan Logam &amp; Batuan</label>
+          <select id="fJenis" onchange="onJenisChange()"></select>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Volume Produksi (M³)</label>
+          <input type="number" id="fVolume" min="0" step="0.1" placeholder="Contoh: 120" oninput="recalcPreview()">
+        </div>
+        <div>
+          <label>Nilai Jual per M³ (Rp) <span id="hargaSumber" style="color:#888;font-weight:400;"></span></label>
+          <input type="number" id="fHargaM3" min="0" step="500" placeholder="Terisi otomatis bila tersedia" oninput="recalcPreview()">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Tarif Pajak MBLB</label>
+          <input type="number" id="fTarif" min="0" max="100" step="0.1" value="20" oninput="recalcPreview()">
+        </div>
+        <div>
+          <label>Tarif Opsen MBLB <span style="color:#888;font-weight:400;">(Ps. 83 UU HKPD)</span></label>
+          <input type="number" id="fOpsenTarif" min="0" max="100" step="0.1" value="25" oninput="recalcPreview()">
+        </div>
+      </div>
+
+      <div class="calc-box" id="calcBox" style="display:none;"></div>
+
+      <button type="button" class="btn btn-gold" onclick="addItem()">+ Tambah Data Objek ke Daftar</button>
+
+      <div id="itemList" style="margin-top:14px;"></div>
+      <div id="wpTotalBar"></div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Catatan &amp; Tanggal</p>
+      <label>Catatan Lapangan</label>
+      <textarea id="fCatatan" placeholder="Kondisi lokasi tambang, kendala pendataan, dsb."></textarea>
+      <label>Tanggal Survei</label>
+      <input type="date" id="fTanggal">
+
+      <div class="actions">
+        <button class="btn btn-navy" onclick="saveEntry()">💾 Simpan Data Wajib Pajak Ini</button>
+        <button class="btn btn-outline" onclick="resetForm()">Bersihkan Semua Form</button>
+      </div>
+    </div>
+    <p style="font-size:.72rem;color:#888;text-align:center;">Rumus: Dasar Pengenaan Pajak = Volume Produksi (M³) × Nilai Jual per M³, lalu Pajak Terutang = Dasar Pengenaan Pajak × Tarif Pajak. Dasar hukum: Perda Pajak MBLB Kabupaten Paser Pasal 5 (tarif 20%) &amp; Pasal 6 (nilai jual per M³). Untuk jenis mineral yang belum punya nilai jual baku, gunakan harga pasar setempat hasil survei.<br>Opsen MBLB = Pajak Terutang × Tarif Opsen (25%), dipungut Pemerintah Provinsi bersamaan dengan Pajak MBLB, sesuai Pasal 81 huruf c &amp; Pasal 83 UU No. 1 Tahun 2022 tentang HKPD. Total Tagihan WP = Pajak Terutang + Opsen Terutang.</p>
+  </div>
+
+  <!-- LIST TAB -->
+  <div id="tabList" style="display:none;">
+    <div class="card">
+      <div class="toolbar">
+        <span class="count-badge" id="countBadge">0 WP</span>
+        <div class="actions" style="margin:0;">
+          <button class="btn btn-gold" onclick="exportExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <p style="font-size:.75rem;color:#888;margin:0 0 10px 0;">💾 Data tersimpan <strong>di HP masing-masing</strong>. Kalau tim lapangan lebih dari 1 orang, tiap petugas <strong>Export Excel</strong> di akhir hari, lalu digabung manual.</p>
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>Nama WP</th>
+              <th>Usaha</th>
+              <th>Periode</th>
+              <th>Jenis Mineral</th>
+              <th>Volume (M³)</th>
+              <th>Nilai Jual/M³</th>
+              <th>Pajak Terutang</th>
+              <th>Opsen (25%)</th>
+              <th>Total Tagihan</th>
+              <th>Status Bayar</th>
+              <th>Lokasi</th>
+              <th>Tanggal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dataBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyMsg" class="empty" style="display:none;">Belum ada data yang tersimpan.</div>
+      <div class="total-bar" id="grandTotalBar" style="display:none;">
+        <span>TOTAL POTENSI PAJAK MBLB</span>
+        <span id="grandTotalValue">Rp 0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA POTENSI TAB -->
+  <div id="tabPotensi" style="display:none;">
+    <div class="card">
+      <p class="section-title">Data Potensi Pajak MBLB</p>
+      <p style="font-size:.78rem;color:#666;margin:0 0 12px 0;">Rekap potensi pajak (Pajak + Opsen) per Wajib Pajak, untuk pemetaan potensi penerimaan daerah dari sektor MBLB.</p>
+      <div class="summary-grid">
+        <div class="stat-card"><div class="stat-label">Jumlah WP Terdata</div><div class="stat-value" id="potWpCount">0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Potensi (Pajak+Opsen)</div><div class="stat-value" id="potTotalValue">Rp 0</div></div>
+      </div>
+      <div class="toolbar">
+        <div>
+          <label style="margin:0 0 4px 0;">Filter Kecamatan</label>
+          <select id="potKecFilter" onchange="renderPotensi()"><option value="">Semua Kecamatan</option></select>
+        </div>
+        <div class="actions" style="margin:0;">
+          <button class="btn btn-gold" onclick="exportPotensiExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Nama WP</th><th>Usaha</th><th>Kecamatan</th><th>Jml Objek</th><th>Total Volume (M³)</th><th>Total Pajak</th><th>Total Opsen</th><th>Total Potensi</th></tr></thead>
+          <tbody id="potensiBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyPotensi" class="empty" style="display:none;">Belum ada data.</div>
+    </div>
+  </div>
+
+  <!-- LAPORAN PENERIMAAN TAB -->
+  <div id="tabPenerimaan" style="display:none;">
+    <div class="card">
+      <p class="section-title">Laporan Penerimaan (Realisasi Pembayaran)</p>
+      <p style="font-size:.78rem;color:#666;margin:0 0 12px 0;">Catat pembayaran lewat tombol "💰 Bayar" di tab Daftar Data. Rekap ini membandingkan Ketetapan (Total Tagihan: Pajak+Opsen) dengan Realisasi (jumlah diterima).</p>
+      <div class="toolbar">
+        <div>
+          <label style="margin:0 0 4px 0;">Tahun</label>
+          <select id="penTahun" onchange="renderPenerimaan()"></select>
+        </div>
+        <div class="actions" style="margin:0;">
+          <button class="btn btn-gold" onclick="exportPenerimaanExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <div class="summary-grid">
+        <div class="stat-card"><div class="stat-label">Total Ketetapan</div><div class="stat-value" id="penKetetapanValue">Rp 0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Diterima</div><div class="stat-value" id="penDiterimaValue">Rp 0</div></div>
+        <div class="stat-card"><div class="stat-label">Sisa Piutang</div><div class="stat-value" id="penPiutangValue">Rp 0</div></div>
+        <div class="stat-card"><div class="stat-label">% Capaian</div><div class="stat-value" id="penCapaianValue">0%</div></div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Bulan</th><th>Ketetapan</th><th>Diterima</th><th>Piutang</th><th>% Capaian</th></tr></thead>
+          <tbody id="penerimaanBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyPenerimaan" class="empty" style="display:none;">Belum ada data untuk tahun ini.</div>
+      <p class="section-title" style="margin-top:18px;">Rincian per Wajib Pajak</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Nama WP</th><th>Periode</th><th>Ketetapan</th><th>Status</th><th>Diterima</th><th>Tgl Bayar</th></tr></thead>
+          <tbody id="penerimaanDetailBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAPORAN BULANAN TAB -->
+  <div id="tabBulanan" style="display:none;">
+    <div class="card">
+      <p class="section-title">Laporan Bulanan</p>
+      <div class="toolbar">
+        <div>
+          <label style="margin:0 0 4px 0;">Tahun</label>
+          <select id="lapTahun" onchange="renderBulanan()"></select>
+        </div>
+        <div class="actions" style="margin:0;">
+          <button class="btn btn-gold" onclick="exportBulananExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Bulan</th><th>Jumlah Laporan</th><th>Total Volume (M³)</th><th>Total Pajak</th><th>Total Opsen MBLB</th><th>Total Tagihan</th></tr>
+          </thead>
+          <tbody id="bulananBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyBulanan" class="empty" style="display:none;">Belum ada data untuk tahun ini.</div>
+      <div class="total-bar" id="bulananTotalBar" style="display:none;">
+        <span>TOTAL TAGIHAN (PAJAK+OPSEN) TAHUN INI</span>
+        <span id="bulananTotalValue">Rp 0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAPORAN TAHUNAN TAB -->
+  <div id="tabTahunan" style="display:none;">
+    <div class="card">
+      <p class="section-title">Laporan Tahunan</p>
+      <div class="toolbar">
+        <span class="count-badge" id="tahunanCountBadge">0 Tahun</span>
+        <div class="actions" style="margin:0;">
+          <button class="btn btn-gold" onclick="exportTahunanExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Tahun</th><th>Jumlah Laporan</th><th>Total Volume (M³)</th><th>Total Pajak</th><th>Total Opsen MBLB</th><th>Total Tagihan</th></tr>
+          </thead>
+          <tbody id="tahunanBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyTahunan" class="empty" style="display:none;">Belum ada data yang bisa direkap.</div>
+      <div class="total-bar" id="tahunanTotalBar" style="display:none;">
+        <span>TOTAL TAGIHAN (PAJAK+OPSEN) SEMUA TAHUN</span>
+        <span id="tahunanTotalValue">Rp 0</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PEMBAYARAN -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal-box">
+    <p class="section-title">💰 Catat Pembayaran</p>
+    <div id="payModalInfo" style="font-size:.82rem;margin-bottom:10px;line-height:1.5;"></div>
+    <label style="margin-top:0;">Tanggal Bayar</label>
+    <input type="date" id="payTanggal">
+    <label>Jumlah Diterima (Rp)</label>
+    <input type="number" id="payJumlah" min="0" step="1">
+    <label>Status</label>
+    <select id="payStatus">
+      <option value="Lunas">Lunas</option>
+      <option value="Sebagian">Sebagian</option>
+      <option value="Belum Bayar">Belum Bayar</option>
+    </select>
+    <label>Keterangan / No. Bukti Setor</label>
+    <input type="text" id="payKet" placeholder="No. SSPD / bukti setor, dsb.">
+    <div class="actions">
+      <button class="btn btn-navy" onclick="savePayment()">💾 Simpan</button>
+      <button class="btn btn-outline" onclick="closePayModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== PARAMETER PAJAK MBLB (Perda Pajak MBLB Kab. Paser) =====================
+// Pasal 5: Tarif pajak MBLB = 20%
+// Pasal 6: Nilai Jual per M3 untuk sebagian jenis mineral bukan logam & batuan
+const DEFAULT_TARIF = 20; // persen (Perda Pajak MBLB Kabupaten Paser Pasal 5)
+
+// ===================== PARAMETER OPSEN MBLB (UU No. 1 Tahun 2022 tentang HKPD) =====================
+// Pasal 81 huruf c: Opsen dikenakan atas pajak terutang dari Pajak MBLB, dipungut oleh Pemerintah Provinsi.
+// Pasal 83: Tarif Opsen Pajak MBLB ditetapkan sebesar 25% dari Pajak MBLB Terutang.
+// Dasar pengenaan opsen BUKAN nilai objek pajak, melainkan besaran Pajak MBLB yang terutang.
+const DEFAULT_OPSEN_TARIF = 25; // persen, sesuai Pasal 83 UU HKPD
+
+// jenis: { label, harga: angka (Rp/M3) atau null jika mengikuti harga pasar/survei }
+const JENIS_MBLB = [
+  { label: "Pasir Kuarsa", harga: 50000 },
+  { label: "Kalsit (Batu Bintang)", harga: 40000 },
+  { label: "Batu Gamping (Batu Gunung)", harga: 34000 },
+  { label: "Basalt / Batu Beku Hitam Gelap (Batu Gunung)", harga: 34000 },
+  { label: "Andesit / Granit-Andesit (Batu Gunung)", harga: 34000 },
+  { label: "Diorit / Batu Beku Butir (Batu Gunung)", harga: 34000 },
+  { label: "Harzburgit / Batu Hijau (Batu Gunung)", harga: 34000 },
+  { label: "Piropilit (Batu Tufa/Abu)", harga: 34000 },
+  { label: "Tanah Liat untuk Bahan Bangunan", harga: 20000 },
+  { label: "Tanah Urug", harga: 14000 },
+  { label: "Bentonit", harga: 38000 },
+  { label: "Pasir Sungai", harga: 30000 },
+  { label: "Pasir Batu (Sirtu/Krikil)", harga: 40000 },
+  { label: "Koral", harga: 50000 },
+  { label: "Pasir Gunung (Non Kursa)", harga: 18000 },
+  { label: "Pasir Laut", harga: 30000 },
+  { label: "Batu Setengah Permata - Kristal Kuarsa", harga: null },
+  { label: "Batu Setengah Permata - Kuarsit", harga: null },
+  { label: "Asbes", harga: null },
+  { label: "Batu Tulis", harga: null },
+  { label: "Batu Kapur (bila berbeda dari Batu Gamping)", harga: null },
+  { label: "Batu Apung", harga: null },
+  { label: "Batu Permata", harga: null },
+  { label: "Dolomit", harga: null },
+  { label: "Feldspar", harga: null },
+  { label: "Garam Batu (Halite)", harga: null },
+  { label: "Grafit", harga: null },
+  { label: "Gips", harga: null },
+  { label: "Kaolin", harga: null },
+  { label: "Leusit", harga: null },
+  { label: "Magnesit", harga: null },
+  { label: "Mika", harga: null },
+  { label: "Marmer", harga: null },
+  { label: "Nitrat", harga: null },
+  { label: "Opsidien", harga: null },
+  { label: "Oker", harga: null },
+  { label: "Perlit", harga: null },
+  { label: "Phospat", harga: null },
+  { label: "Talk", harga: null },
+  { label: "Tanah Serap (Fullers Earth)", harga: null },
+  { label: "Tanah Diatome", harga: null },
+  { label: "Tawas (Alum)", harga: null },
+  { label: "Tras", harga: null },
+  { label: "Yarosif", harga: null },
+  { label: "Zeolit", harga: null },
+  { label: "Trakkit", harga: null },
+  { label: "Mineral Bukan Logam dan Batuan Lainnya (sesuai ketentuan)", harga: null }
+];
+
+let currentLat = null, currentLng = null;
+let map = null, marker = null;
+let entries = [];
+let currentItems = [];
+let geocodeTimer = null;
+let payTarget = null; // {entryId, itemIdx} untuk modal pencatatan pembayaran
+
+function switchTab(tab){
+  document.getElementById('tabForm').style.display = tab==='form' ? 'block':'none';
+  document.getElementById('tabList').style.display = tab==='list' ? 'block':'none';
+  document.getElementById('tabPotensi').style.display = tab==='potensi' ? 'block':'none';
+  document.getElementById('tabPenerimaan').style.display = tab==='penerimaan' ? 'block':'none';
+  document.getElementById('tabBulanan').style.display = tab==='bulanan' ? 'block':'none';
+  document.getElementById('tabTahunan').style.display = tab==='tahunan' ? 'block':'none';
+  document.getElementById('tabBtnForm').classList.toggle('active', tab==='form');
+  document.getElementById('tabBtnList').classList.toggle('active', tab==='list');
+  document.getElementById('tabBtnPotensi').classList.toggle('active', tab==='potensi');
+  document.getElementById('tabBtnPenerimaan').classList.toggle('active', tab==='penerimaan');
+  document.getElementById('tabBtnBulanan').classList.toggle('active', tab==='bulanan');
+  document.getElementById('tabBtnTahunan').classList.toggle('active', tab==='tahunan');
+  if(tab==='list') renderTable();
+  if(tab==='potensi') renderPotensi();
+  if(tab==='penerimaan') renderPenerimaan();
+  if(tab==='bulanan') renderBulanan();
+  if(tab==='tahunan') renderTahunan();
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function formatRupiah(n){
+  if(isNaN(n)) return 'Rp 0';
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+}
+
+function bulanNama(m){
+  const names = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  return names[m];
+}
+
+function populateJenisSelect(){
+  const sel = document.getElementById('fJenis');
+  sel.innerHTML = JENIS_MBLB.map((j,idx)=>`<option value="${idx}">${j.label}${j.harga===null ? ' — harga survei pasar' : ''}</option>`).join('');
+}
+
+function onJenisChange(){
+  const idx = parseInt(document.getElementById('fJenis').value,10);
+  const jenis = JENIS_MBLB[idx];
+  const hargaField = document.getElementById('fHargaM3');
+  const sumberLabel = document.getElementById('hargaSumber');
+  if(jenis.harga !== null){
+    hargaField.value = jenis.harga;
+    sumberLabel.textContent = '(baku Pasal 6)';
+  } else {
+    hargaField.value = '';
+    sumberLabel.textContent = '(isi manual, survei pasar)';
+  }
+  recalcPreview();
+}
+
+// ----- perhitungan item -----
+function readCurrentItemInputs(){
+  return {
+    periode: document.getElementById('fPeriode').value,
+    jenisIdx: document.getElementById('fJenis').value,
+    volume: document.getElementById('fVolume').value,
+    hargaM3: document.getElementById('fHargaM3').value,
+    tarif: document.getElementById('fTarif').value,
+    opsenTarif: document.getElementById('fOpsenTarif').value
+  };
+}
+
+function calcItemValues(volume, hargaM3, tarifPersen, opsenTarifPersen){
+  const volumeNum = parseFloat(volume) || 0;
+  const hargaNum = parseFloat(hargaM3) || 0;
+  const dasarPengenaan = volumeNum * hargaNum;
+  const tarifNum = parseFloat(tarifPersen);
+  const tarif = isNaN(tarifNum) ? DEFAULT_TARIF : tarifNum;
+  const pajakTerutang = dasarPengenaan * (tarif/100);
+  // Opsen MBLB (UU HKPD Ps. 83): dasar pengenaan opsen = Pajak Terutang, bukan nilai objek pajak
+  const opsenTarifNum = parseFloat(opsenTarifPersen);
+  const opsenTarif = isNaN(opsenTarifNum) ? DEFAULT_OPSEN_TARIF : opsenTarifNum;
+  const opsenTerutang = pajakTerutang * (opsenTarif/100);
+  const totalTagihan = pajakTerutang + opsenTerutang;
+  return { volume: volumeNum, hargaM3: hargaNum, dasarPengenaan, tarifPajak: tarif, pajakTerutang, tarifOpsen: opsenTarif, opsenTerutang, totalTagihan };
+}
+
+function recalcPreview(){
+  const d = readCurrentItemInputs();
+  const box = document.getElementById('calcBox');
+  if(!d.volume || !d.hargaM3){
+    box.style.display = 'none';
+    return;
+  }
+  const r = calcItemValues(d.volume, d.hargaM3, d.tarif, d.opsenTarif);
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="calc-row"><span>Volume Produksi</span><span>${r.volume.toLocaleString('id-ID')} M³</span></div>
+    <div class="calc-row"><span>Nilai Jual per M³</span><span>${formatRupiah(r.hargaM3)}</span></div>
+    <div class="calc-row"><span>Dasar Pengenaan Pajak</span><span>${formatRupiah(r.dasarPengenaan)}</span></div>
+    <div class="calc-row"><span>Tarif Pajak</span><span>${r.tarifPajak}%</span></div>
+    <div class="calc-row"><span>PAJAK TERUTANG</span><span>${formatRupiah(r.pajakTerutang)}</span></div>
+    <div class="calc-row"><span>Tarif Opsen MBLB (Ps. 83 UU HKPD)</span><span>${r.tarifOpsen}%</span></div>
+    <div class="calc-row"><span>OPSEN MBLB TERUTANG</span><span>${formatRupiah(r.opsenTerutang)}</span></div>
+    <div class="calc-row"><span>TOTAL TAGIHAN (Pajak + Opsen)</span><span>${formatRupiah(r.totalTagihan)}</span></div>
+  `;
+}
+
+function addItem(){
+  const d = readCurrentItemInputs();
+  if(!d.periode){
+    showToast('⚠️ Pilih periode laporan dulu.');
+    return;
+  }
+  if(!d.volume){
+    showToast('⚠️ Isi volume produksi dulu.');
+    return;
+  }
+  if(!d.hargaM3){
+    showToast('⚠️ Isi nilai jual per M³ dulu (jenis ini perlu survei harga pasar).');
+    return;
+  }
+  const jenis = JENIS_MBLB[parseInt(d.jenisIdx,10)];
+  const calc = calcItemValues(d.volume, d.hargaM3, d.tarif, d.opsenTarif);
+
+  currentItems.push({
+    periode: d.periode,
+    jenisLabel: jenis.label,
+    calc: calc
+  });
+  renderItemList();
+
+  document.getElementById('fPeriode').value = '';
+  document.getElementById('fVolume').value = '';
+  document.getElementById('fHargaM3').value = '';
+  document.getElementById('hargaSumber').textContent = '';
+  document.getElementById('fTarif').value = DEFAULT_TARIF;
+  document.getElementById('fOpsenTarif').value = DEFAULT_OPSEN_TARIF;
+  document.getElementById('calcBox').style.display = 'none';
+  showToast('✔ Data objek ditambahkan (' + currentItems.length + ')');
+}
+
+function removeItem(idx){
+  currentItems.splice(idx, 1);
+  renderItemList();
+}
+
+function formatPeriode(p){
+  if(!p) return '-';
+  const [y,m] = p.split('-');
+  return bulanNama(parseInt(m,10)-1) + ' ' + y;
+}
+
+function renderItemList(){
+  const box = document.getElementById('itemList');
+  const totalBar = document.getElementById('wpTotalBar');
+  if(currentItems.length === 0){
+    box.innerHTML = '';
+    totalBar.innerHTML = '';
+    return;
+  }
+  box.innerHTML = currentItems.map((it, idx) => `
+    <div class="item-card">
+      <div class="info">
+        <b>${idx+1}. ${escapeHtml(it.jenisLabel)}</b> — ${formatPeriode(it.periode)}<br>
+        Volume: ${it.calc.volume.toLocaleString('id-ID')} M³ × ${formatRupiah(it.calc.hargaM3)}/M³ = ${formatRupiah(it.calc.dasarPengenaan)}<br>
+        Tarif Pajak: ${it.calc.tarifPajak}% · <span class="pajak">Pajak: ${formatRupiah(it.calc.pajakTerutang)}</span><br>
+        Opsen MBLB ${it.calc.tarifOpsen}%: ${formatRupiah(it.calc.opsenTerutang)} · <span class="pajak">Total: ${formatRupiah(it.calc.totalTagihan)}</span>
+      </div>
+      <button type="button" class="del-btn" onclick="removeItem(${idx})">Hapus</button>
+    </div>
+  `).join('');
+  const totalPajak = currentItems.reduce((s,it)=>s+it.calc.pajakTerutang, 0);
+  const totalOpsen = currentItems.reduce((s,it)=>s+it.calc.opsenTerutang, 0);
+  const totalSemua = totalPajak + totalOpsen;
+  totalBar.innerHTML = `<div class="total-bar"><span>Total Pajak WP Ini</span><span>${formatRupiah(totalPajak)}</span></div>
+    <div class="total-bar"><span>Total Opsen MBLB WP Ini</span><span>${formatRupiah(totalOpsen)}</span></div>
+    <div class="total-bar"><span>TOTAL TAGIHAN WP Ini</span><span>${formatRupiah(totalSemua)}</span></div>`;
+}
+
+function escapeHtml(str){
+  if(!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ----- peta, GPS, & alamat otomatis (reverse geocoding) -----
+function initMap(){
+  const defaultLat = -1.9456, defaultLng = 116.1937;
+  map = L.map('map').setView([defaultLat, defaultLng], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:19,
+    attribution:'© OpenStreetMap'
+  }).addTo(map);
+
+  marker = L.marker([defaultLat, defaultLng], {draggable:true}).addTo(map);
+  marker.on('dragend', function(e){
+    const p = marker.getLatLng();
+    setCoords(p.lat, p.lng, 'geser pin');
+  });
+
+  map.on('click', function(e){
+    setCoords(e.latlng.lat, e.latlng.lng, 'ketuk peta');
+    marker.setLatLng(e.latlng);
+  });
+}
+
+function setCoords(lat, lng, source){
+  currentLat = lat;
+  currentLng = lng;
+  document.getElementById('fLatManual').value = lat.toFixed(6);
+  document.getElementById('fLngManual').value = lng.toFixed(6);
+  document.getElementById('locStatus').innerHTML = `<div class="coords">✔ Koordinat (${source}): ${lat.toFixed(6)}, ${lng.toFixed(6)}</div>`;
+  scheduleReverseGeocode(lat, lng);
+}
+
+function scheduleReverseGeocode(lat, lng){
+  clearTimeout(geocodeTimer);
+  const status = document.getElementById('locStatus');
+  status.innerHTML += '<div class="loading" id="geoLoading">⏳ Mencari alamat otomatis...</div>';
+  geocodeTimer = setTimeout(()=> reverseGeocode(lat, lng), 600);
+}
+
+async function reverseGeocode(lat, lng){
+  try{
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'id' } });
+    if(!res.ok) throw new Error('gagal fetch');
+    const data = await res.json();
+    const loadingEl = document.getElementById('geoLoading');
+    if(loadingEl) loadingEl.remove();
+    if(data && data.display_name){
+      document.getElementById('fAlamat').value = data.display_name;
+      const a = data.address || {};
+      if(!document.getElementById('fKec').value){
+        document.getElementById('fKec').value = a.suburb || a.village || a.town || a.county || a.city_district || '';
+      }
+      document.getElementById('locStatus').innerHTML += `<div class="addr-auto">📍 Alamat otomatis: ${escapeHtml(data.display_name)}</div>`;
+    } else {
+      document.getElementById('locStatus').innerHTML += '<div class="err">Alamat tidak ditemukan untuk titik ini — isi manual.</div>';
+    }
+  }catch(e){
+    const loadingEl = document.getElementById('geoLoading');
+    if(loadingEl) loadingEl.remove();
+    document.getElementById('locStatus').innerHTML += '<div class="err">Gagal mengambil alamat otomatis (cek koneksi internet) — isi manual.</div>';
+  }
+}
+
+function applyManualCoords(){
+  const lat = parseFloat(document.getElementById('fLatManual').value);
+  const lng = parseFloat(document.getElementById('fLngManual').value);
+  if(isNaN(lat) || isNaN(lng)) return;
+  currentLat = lat;
+  currentLng = lng;
+  marker.setLatLng([lat, lng]);
+  map.setView([lat, lng], 17);
+  document.getElementById('locStatus').innerHTML = `<div class="coords">✔ Koordinat (input manual): ${lat.toFixed(6)}, ${lng.toFixed(6)}</div>`;
+  scheduleReverseGeocode(lat, lng);
+}
+
+function getLocation(){
+  const status = document.getElementById('locStatus');
+  if(!navigator.geolocation){
+    status.innerHTML = '<div class="err">Perangkat/browser ini tidak mendukung GPS otomatis. Silakan ketuk lokasi langsung di peta atau ketik manual.</div>';
+    return;
+  }
+  status.innerHTML = '<div class="loading">⏳ Mencoba ambil lokasi GPS...</div>';
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      showMap(pos.coords.latitude, pos.coords.longitude);
+      setCoords(pos.coords.latitude, pos.coords.longitude, 'GPS otomatis ±' + Math.round(pos.coords.accuracy) + 'm');
+    },
+    ()=>{
+      status.innerHTML = '<div class="err">GPS otomatis tidak tersedia — cukup ketuk titik lokasinya di peta atau ketik manual di atas.</div>';
+    },
+    { enableHighAccuracy:true, timeout:8000 }
+  );
+}
+
+function showMap(lat, lng){
+  map.setView([lat,lng], 17);
+  marker.setLatLng([lat,lng]);
+  setTimeout(()=>map.invalidateSize(), 200);
+}
+
+// ----- penyimpanan -----
+function loadEntries(){
+  try{
+    const raw = localStorage.getItem('wp-mblb-entries-v1');
+    entries = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    console.error('Gagal load data', e);
+    entries = [];
+  }
+}
+
+function persistEntries(){
+  try{
+    localStorage.setItem('wp-mblb-entries-v1', JSON.stringify(entries));
+  }catch(e){
+    console.error('Gagal menyimpan', e);
+    showToast('⚠️ Gagal menyimpan data. Memori penyimpanan mungkin penuh.');
+  }
+}
+
+function saveEntry(){
+  const nama = document.getElementById('fNama').value.trim();
+  if(!nama){
+    showToast('⚠️ Nama wajib pajak harus diisi.');
+    document.getElementById('fNama').focus();
+    return;
+  }
+  const periodeNow = document.getElementById('fPeriode').value;
+  const volumeNow = document.getElementById('fVolume').value;
+  const hargaNow = document.getElementById('fHargaM3').value;
+  if(periodeNow && volumeNow && hargaNow){
+    addItem();
+  }
+  if(currentItems.length === 0){
+    showToast('⚠️ Tambahkan minimal 1 data objek pajak dulu.');
+    return;
+  }
+
+  const entry = {
+    id: Date.now().toString(),
+    nama,
+    nik: document.getElementById('fNik').value.trim(),
+    badanUsaha: document.getElementById('fBadanUsaha').value.trim(),
+    npwpd: document.getElementById('fNpwpd').value.trim(),
+    hp: document.getElementById('fHp').value.trim(),
+    izin: document.getElementById('fIzin').value,
+    petugas: document.getElementById('fPetugas').value.trim(),
+    kecamatan: document.getElementById('fKec').value.trim(),
+    alamat: document.getElementById('fAlamat').value.trim(),
+    lat: currentLat,
+    lng: currentLng,
+    catatan: document.getElementById('fCatatan').value.trim(),
+    tanggal: document.getElementById('fTanggal').value,
+    items: currentItems.slice()
+  };
+  entries.unshift(entry);
+  persistEntries();
+  const totalTagihan = entry.items.reduce((s,it)=>s+it.calc.totalTagihan,0);
+  showToast('✔ Data WP tersimpan · ' + entry.items.length + ' objek · Total (Pajak+Opsen): ' + formatRupiah(totalTagihan));
+  resetForm();
+  switchTab('list');
+}
+
+function resetForm(){
+  ['fNama','fNik','fBadanUsaha','fNpwpd','fHp','fPetugas','fKec','fAlamat','fCatatan','fTanggal',
+   'fPeriode','fVolume','fHargaM3','fLatManual','fLngManual'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fIzin').value = 'SIPB';
+  document.getElementById('fJenis').selectedIndex = 0;
+  document.getElementById('hargaSumber').textContent = '';
+  document.getElementById('fTarif').value = DEFAULT_TARIF;
+  document.getElementById('fOpsenTarif').value = DEFAULT_OPSEN_TARIF;
+  document.getElementById('calcBox').style.display = 'none';
+  currentLat = null; currentLng = null;
+  currentItems = [];
+  renderItemList();
+  document.getElementById('locStatus').innerHTML = '';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('fTanggal').value = today;
+  onJenisChange();
+}
+
+function flattenEntries(){
+  const rows = [];
+  entries.forEach(e=>{
+    const its = e.items && e.items.length ? e.items : [null];
+    its.forEach(it=> rows.push({ entry: e, item: it }));
+  });
+  return rows;
+}
+
+// ----- tab Daftar Data -----
+function renderTable(){
+  const body = document.getElementById('dataBody');
+  const empty = document.getElementById('emptyMsg');
+  const badge = document.getElementById('countBadge');
+  const grandBar = document.getElementById('grandTotalBar');
+  badge.textContent = entries.length + ' WP';
+  const flat = flattenEntries();
+  if(flat.length===0){
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    grandBar.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  body.innerHTML = flat.map(({entry:e, item:it})=>{
+    const idx = e.items ? e.items.indexOf(it) : -1;
+    return `
+    <tr>
+      <td>${escapeHtml(e.nama)}${e.nik ? '<br><small>NIK: '+escapeHtml(e.nik)+'</small>' : ''}</td>
+      <td>${escapeHtml(e.badanUsaha||'-')}</td>
+      <td>${it ? formatPeriode(it.periode) : '-'}</td>
+      <td>${it ? escapeHtml(it.jenisLabel) : '-'}</td>
+      <td>${it ? it.calc.volume.toLocaleString('id-ID') : '-'}</td>
+      <td>${it ? formatRupiah(it.calc.hargaM3) : '-'}</td>
+      <td>${it ? formatRupiah(it.calc.pajakTerutang) : '-'}</td>
+      <td>${it ? formatRupiah(it.calc.opsenTerutang) : '-'}</td>
+      <td><b>${it ? formatRupiah(it.calc.totalTagihan) : '-'}</b></td>
+      <td>${payStatusCell(it)}${it && idx>=0 ? '<button type="button" class="pay-btn" onclick="openPayModal(\''+e.id+'\','+idx+')">💰 Bayar</button>' : ''}</td>
+      <td>${(e.lat && e.lng) ? '<a href="https://www.google.com/maps?q='+e.lat+','+e.lng+'" target="_blank">🗺 '+e.lat.toFixed(4)+', '+e.lng.toFixed(4)+'</a>' : '-'}${e.alamat ? '<br><small>'+escapeHtml(e.alamat.slice(0,60))+(e.alamat.length>60?'…':'')+'</small>' : ''}</td>
+      <td>${e.tanggal||'-'}</td>
+      <td><button class="del-btn" onclick="deleteEntry('${e.id}')">Hapus WP</button></td>
+    </tr>
+  `;}).join('');
+  const grandTotalPajak = flat.reduce((s,{item:it})=> s + (it ? it.calc.pajakTerutang : 0), 0);
+  const grandTotalOpsen = flat.reduce((s,{item:it})=> s + (it ? it.calc.opsenTerutang : 0), 0);
+  const grandTotal = grandTotalPajak + grandTotalOpsen;
+  grandBar.style.display = 'flex';
+  grandBar.innerHTML = `<span>TOTAL POTENSI PAJAK MBLB: ${formatRupiah(grandTotalPajak)} &nbsp;+&nbsp; OPSEN MBLB: ${formatRupiah(grandTotalOpsen)}</span><span>TOTAL: ${formatRupiah(grandTotal)}</span>`;
+}
+
+function payStatusCell(it){
+  if(!it) return '-';
+  const p = it.pembayaran;
+  if(!p || !p.status || p.status==='Belum Bayar'){
+    return '<span class="badge badge-belum">Belum Bayar</span>';
+  }
+  if(p.status==='Lunas'){
+    return '<span class="badge badge-lunas">Lunas</span>';
+  }
+  return '<span class="badge badge-sebagian">Sebagian</span>';
+}
+
+// ----- modal pembayaran (Laporan Penerimaan) -----
+function openPayModal(entryId, itemIdx){
+  const e = entries.find(x=>x.id===entryId);
+  if(!e) return;
+  const it = e.items[itemIdx];
+  if(!it) return;
+  payTarget = {entryId, itemIdx};
+  document.getElementById('payModalInfo').innerHTML = `<b>${escapeHtml(e.nama)}</b>${e.badanUsaha ? ' — '+escapeHtml(e.badanUsaha) : ''}<br>Periode ${formatPeriode(it.periode)} — ${escapeHtml(it.jenisLabel)}<br>Total Tagihan (Pajak+Opsen): <b>${formatRupiah(it.calc.totalTagihan)}</b>`;
+  const p = it.pembayaran || {};
+  document.getElementById('payTanggal').value = p.tanggalBayar || new Date().toISOString().slice(0,10);
+  document.getElementById('payJumlah').value = p.jumlahBayar != null ? p.jumlahBayar : Math.round(it.calc.totalTagihan);
+  document.getElementById('payStatus').value = p.status || 'Lunas';
+  document.getElementById('payKet').value = p.keterangan || '';
+  document.getElementById('payModal').classList.add('show');
+}
+
+function closePayModal(){
+  document.getElementById('payModal').classList.remove('show');
+  payTarget = null;
+}
+
+function savePayment(){
+  if(!payTarget) return;
+  const e = entries.find(x=>x.id===payTarget.entryId);
+  if(!e) return;
+  const it = e.items[payTarget.itemIdx];
+  if(!it) return;
+  it.pembayaran = {
+    tanggalBayar: document.getElementById('payTanggal').value,
+    jumlahBayar: parseFloat(document.getElementById('payJumlah').value) || 0,
+    status: document.getElementById('payStatus').value,
+    keterangan: document.getElementById('payKet').value.trim()
+  };
+  persistEntries();
+  closePayModal();
+  renderTable();
+  showToast('✔ Pembayaran dicatat');
+}
+
+// ----- Data Potensi Pajak -----
+function populateKecFilter(){
+  const sel = document.getElementById('potKecFilter');
+  const cur = sel.value;
+  const kecs = Array.from(new Set(entries.map(e=>e.kecamatan).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">Semua Kecamatan</option>' + kecs.map(k=>`<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+  sel.value = kecs.includes(cur) ? cur : '';
+}
+
+function potensiRows(){
+  const filter = document.getElementById('potKecFilter') ? document.getElementById('potKecFilter').value : '';
+  return entries
+    .filter(e => !filter || e.kecamatan === filter)
+    .map(e=>{
+      const items = e.items || [];
+      const totalVolume = items.reduce((s,it)=>s+(it.calc.volume||0), 0);
+      const totalPajak = items.reduce((s,it)=>s+it.calc.pajakTerutang, 0);
+      const totalOpsen = items.reduce((s,it)=>s+it.calc.opsenTerutang, 0);
+      return { entry:e, jumlahObjek: items.length, totalVolume, totalPajak, totalOpsen, totalPotensi: totalPajak+totalOpsen };
+    })
+    .sort((a,b)=> b.totalPotensi - a.totalPotensi);
+}
+
+function renderPotensi(){
+  populateKecFilter();
+  const rows = potensiRows();
+  const body = document.getElementById('potensiBody');
+  const empty = document.getElementById('emptyPotensi');
+  body.innerHTML = rows.map(r=>`
+    <tr>
+      <td>${escapeHtml(r.entry.nama)}</td>
+      <td>${escapeHtml(r.entry.badanUsaha||'-')}</td>
+      <td>${escapeHtml(r.entry.kecamatan||'-')}</td>
+      <td>${r.jumlahObjek}</td>
+      <td>${r.totalVolume.toLocaleString('id-ID')}</td>
+      <td>${formatRupiah(r.totalPajak)}</td>
+      <td>${formatRupiah(r.totalOpsen)}</td>
+      <td><b>${formatRupiah(r.totalPotensi)}</b></td>
+    </tr>
+  `).join('');
+  empty.style.display = rows.length ? 'none' : 'block';
+  document.getElementById('potWpCount').textContent = rows.length;
+  document.getElementById('potTotalValue').textContent = formatRupiah(rows.reduce((s,r)=>s+r.totalPotensi,0));
+}
+
+function exportPotensiExcel(){
+  const rows = potensiRows().map(r=>({
+    'Nama WP': r.entry.nama,
+    'Nama Usaha': r.entry.badanUsaha,
+    'Kecamatan/Desa': r.entry.kecamatan,
+    'Jumlah Objek': r.jumlahObjek,
+    'Total Volume (M3)': r.totalVolume,
+    'Total Pajak MBLB (Rp)': Math.round(r.totalPajak),
+    'Total Opsen MBLB (Rp)': Math.round(r.totalOpsen),
+    'Total Potensi (Rp)': Math.round(r.totalPotensi)
+  }));
+  if(!rows.length){ showToast('Belum ada data untuk diekspor.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:22},{wch:24},{wch:18},{wch:12},{wch:16},{wch:18},{wch:18},{wch:18}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data Potensi MBLB');
+  XLSX.writeFile(wb, 'data-potensi-mblb-' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ----- Laporan Penerimaan -----
+function penerimaanFlat(year){
+  return flattenEntries().filter(({entry:e,item:it})=> it && it.periode && it.periode.slice(0,4)===year);
+}
+
+function populatePenerimaanYearSelect(){
+  const sel = document.getElementById('penTahun');
+  const years = availableYears();
+  const cur = sel.value;
+  sel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value = years.includes(cur) ? cur : years[0];
+}
+
+function renderPenerimaan(){
+  populatePenerimaanYearSelect();
+  const year = document.getElementById('penTahun').value;
+  const flat = penerimaanFlat(year);
+
+  const byMonth = {};
+  for(let m=0;m<12;m++) byMonth[m] = {ketetapan:0, diterima:0};
+  let totalKetetapan=0, totalDiterima=0;
+  flat.forEach(({item:it})=>{
+    const m = parseInt(it.periode.slice(5,7),10) - 1;
+    byMonth[m].ketetapan += it.calc.totalTagihan;
+    const bayar = (it.pembayaran ? it.pembayaran.jumlahBayar : 0) || 0;
+    byMonth[m].diterima += bayar;
+    totalKetetapan += it.calc.totalTagihan;
+    totalDiterima += bayar;
+  });
+
+  const body = document.getElementById('penerimaanBody');
+  const empty = document.getElementById('emptyPenerimaan');
+  body.innerHTML = '';
+  let anyData = false;
+  for(let m=0;m<12;m++){
+    const d = byMonth[m];
+    if(d.ketetapan===0 && d.diterima===0) continue;
+    anyData = true;
+    const piutang = d.ketetapan - d.diterima;
+    const persen = d.ketetapan>0 ? (d.diterima/d.ketetapan*100).toFixed(1) : '0.0';
+    body.innerHTML += `<tr><td>${bulanNama(m)} ${year}</td><td>${formatRupiah(d.ketetapan)}</td><td>${formatRupiah(d.diterima)}</td><td>${formatRupiah(piutang)}</td><td>${persen}%</td></tr>`;
+  }
+  empty.style.display = anyData ? 'none' : 'block';
+
+  const piutangTotal = totalKetetapan - totalDiterima;
+  const persenTotal = totalKetetapan>0 ? (totalDiterima/totalKetetapan*100).toFixed(1) : '0.0';
+  document.getElementById('penKetetapanValue').textContent = formatRupiah(totalKetetapan);
+  document.getElementById('penDiterimaValue').textContent = formatRupiah(totalDiterima);
+  document.getElementById('penPiutangValue').textContent = formatRupiah(piutangTotal);
+  document.getElementById('penCapaianValue').textContent = persenTotal + '%';
+
+  const detailBody = document.getElementById('penerimaanDetailBody');
+  detailBody.innerHTML = flat.map(({entry:e, item:it})=>{
+    const p = it.pembayaran;
+    const bayar = (p ? p.jumlahBayar : 0) || 0;
+    return `<tr>
+      <td>${escapeHtml(e.nama)}</td>
+      <td>${formatPeriode(it.periode)}</td>
+      <td>${formatRupiah(it.calc.totalTagihan)}</td>
+      <td>${payStatusCell(it)}</td>
+      <td>${formatRupiah(bayar)}</td>
+      <td>${p && p.tanggalBayar ? p.tanggalBayar : '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportPenerimaanExcel(){
+  const year = document.getElementById('penTahun').value;
+  const flat = penerimaanFlat(year);
+  const rows = flat.map(({entry:e, item:it})=>{
+    const p = it.pembayaran || {};
+    return {
+      'Nama WP': e.nama,
+      'Usaha': e.badanUsaha,
+      'Periode': formatPeriode(it.periode),
+      'Ketetapan (Pajak+Opsen) (Rp)': Math.round(it.calc.totalTagihan),
+      'Status': p.status || 'Belum Bayar',
+      'Jumlah Diterima (Rp)': Math.round(p.jumlahBayar || 0),
+      'Tanggal Bayar': p.tanggalBayar || '',
+      'Keterangan': p.keterangan || ''
+    };
+  });
+  if(!rows.length){ showToast('Belum ada data untuk tahun ini.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:20},{wch:22},{wch:14},{wch:20},{wch:12},{wch:18},{wch:14},{wch:22}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Penerimaan ' + year);
+  XLSX.writeFile(wb, 'laporan-penerimaan-mblb-' + year + '.xlsx');
+}
+
+function deleteEntry(id){
+  if(!confirm('Hapus data WP ini beserta semua data objek pajaknya?')) return;
+  entries = entries.filter(e=>e.id!==id);
+  persistEntries();
+  renderTable();
+  renderBulanan();
+  renderTahunan();
+  showToast('Data dihapus.');
+}
+
+function exportExcel(){
+  if(entries.length===0){
+    showToast('Belum ada data untuk diekspor.');
+    return;
+  }
+  const flat = flattenEntries();
+  const rows = flat.map(({entry:e, item:it})=>({
+    'Nama WP': e.nama,
+    'NIK KTP': e.nik,
+    'Nama Usaha/Perusahaan': e.badanUsaha,
+    'NPWPD': e.npwpd,
+    'No HP': e.hp,
+    'Jenis Izin': e.izin,
+    'Petugas Survei': e.petugas,
+    'Periode Laporan': it ? formatPeriode(it.periode) : '',
+    'Jenis Mineral': it ? it.jenisLabel : '',
+    'Volume Produksi (M3)': it ? it.calc.volume : '',
+    'Nilai Jual per M3 (Rp)': it ? Math.round(it.calc.hargaM3) : '',
+    'Dasar Pengenaan Pajak (Rp)': it ? Math.round(it.calc.dasarPengenaan) : '',
+    'Tarif Pajak': it ? it.calc.tarifPajak+'%' : '',
+    'Pajak Terutang (Rp)': it ? Math.round(it.calc.pajakTerutang) : '',
+    'Tarif Opsen MBLB': it ? it.calc.tarifOpsen+'%' : '',
+    'Opsen MBLB Terutang (Rp)': it ? Math.round(it.calc.opsenTerutang) : '',
+    'Total Tagihan Pajak+Opsen (Rp)': it ? Math.round(it.calc.totalTagihan) : '',
+    'Status Bayar': it && it.pembayaran ? it.pembayaran.status : 'Belum Bayar',
+    'Jumlah Diterima (Rp)': it && it.pembayaran ? Math.round(it.pembayaran.jumlahBayar||0) : '',
+    'Tanggal Bayar': it && it.pembayaran ? it.pembayaran.tanggalBayar||'' : '',
+    'Kecamatan/Desa': e.kecamatan,
+    'Alamat (Otomatis/Manual)': e.alamat,
+    'Latitude': e.lat || '',
+    'Longitude': e.lng || '',
+    'Catatan': e.catatan,
+    'Tanggal Survei': e.tanggal
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = rows.length ? Object.keys(rows[0]).map(k=>({wch: Math.max(12, Math.min(35, k.length+4))})) : [];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data WP MBLB');
+  XLSX.writeFile(wb, 'data-wp-mblb-' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ----- Laporan Bulanan -----
+function availableYears(){
+  const flat = flattenEntries().filter(r=>r.item && r.item.periode);
+  const years = new Set(flat.map(r => r.item.periode.slice(0,4)));
+  years.add(String(new Date().getFullYear()));
+  return Array.from(years).sort((a,b)=> b.localeCompare(a));
+}
+
+function populateYearSelect(){
+  const sel = document.getElementById('lapTahun');
+  const years = availableYears();
+  const cur = sel.value;
+  sel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value = years.includes(cur) ? cur : years[0];
+}
+
+function renderBulanan(){
+  populateYearSelect();
+  const year = document.getElementById('lapTahun').value;
+  const flat = flattenEntries().filter(r=>r.item && r.item.periode && r.item.periode.slice(0,4)===year);
+
+  const byMonth = {};
+  for(let m=0;m<12;m++) byMonth[m] = {count:0, volume:0, pajak:0, opsen:0};
+  flat.forEach(r=>{
+    const m = parseInt(r.item.periode.slice(5,7),10) - 1;
+    byMonth[m].count++;
+    byMonth[m].volume += r.item.calc.volume;
+    byMonth[m].pajak += r.item.calc.pajakTerutang;
+    byMonth[m].opsen += r.item.calc.opsenTerutang;
+  });
+
+  const body = document.getElementById('bulananBody');
+  const empty = document.getElementById('emptyBulanan');
+  const bar = document.getElementById('bulananTotalBar');
+  body.innerHTML = '';
+  let totalPajak=0, totalOpsen=0, anyData=false;
+  for(let m=0;m<12;m++){
+    const d = byMonth[m];
+    if(d.count===0) continue;
+    anyData = true;
+    totalPajak += d.pajak;
+    totalOpsen += d.opsen;
+    body.innerHTML += `<tr><td>${bulanNama(m)} ${year}</td><td>${d.count}</td><td>${d.volume.toLocaleString('id-ID')}</td><td>${formatRupiah(d.pajak)}</td><td>${formatRupiah(d.opsen)}</td><td><b>${formatRupiah(d.pajak+d.opsen)}</b></td></tr>`;
+  }
+  if(anyData){
+    empty.style.display = 'none';
+    bar.style.display = 'flex';
+    document.getElementById('bulananTotalValue').textContent = formatRupiah(totalPajak+totalOpsen) + ' (Pajak: ' + formatRupiah(totalPajak) + ' · Opsen: ' + formatRupiah(totalOpsen) + ')';
+  } else {
+    empty.style.display = 'block';
+    bar.style.display = 'none';
+  }
+}
+
+function exportBulananExcel(){
+  const year = document.getElementById('lapTahun').value;
+  const flat = flattenEntries().filter(r=>r.item && r.item.periode && r.item.periode.slice(0,4)===year);
+  const byMonth = {};
+  for(let m=0;m<12;m++) byMonth[m] = {count:0, volume:0, pajak:0, opsen:0};
+  flat.forEach(r=>{
+    const m = parseInt(r.item.periode.slice(5,7),10) - 1;
+    byMonth[m].count++; byMonth[m].volume += r.item.calc.volume; byMonth[m].pajak += r.item.calc.pajakTerutang; byMonth[m].opsen += r.item.calc.opsenTerutang;
+  });
+  const rows = [];
+  for(let m=0;m<12;m++){
+    const d = byMonth[m];
+    rows.push({
+      'Bulan': bulanNama(m) + ' ' + year,
+      'Jumlah Laporan': d.count,
+      'Total Volume (M3)': d.volume,
+      'Total Pajak (Rp)': Math.round(d.pajak),
+      'Total Opsen MBLB (Rp)': Math.round(d.opsen),
+      'Total Tagihan Pajak+Opsen (Rp)': Math.round(d.pajak + d.opsen)
+    });
+  }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:18},{wch:16},{wch:16},{wch:18},{wch:20},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan Bulanan ' + year);
+  XLSX.writeFile(wb, 'laporan-bulanan-mblb-' + year + '.xlsx');
+}
+
+// ----- Laporan Tahunan -----
+function renderTahunan(){
+  const flat = flattenEntries().filter(r=>r.item && r.item.periode);
+  const byYear = {};
+  flat.forEach(r=>{
+    const y = r.item.periode.slice(0,4);
+    if(!byYear[y]) byYear[y] = {count:0, volume:0, pajak:0, opsen:0};
+    byYear[y].count++; byYear[y].volume += r.item.calc.volume; byYear[y].pajak += r.item.calc.pajakTerutang; byYear[y].opsen += r.item.calc.opsenTerutang;
+  });
+  const years = Object.keys(byYear).sort((a,b)=> b.localeCompare(a));
+
+  const body = document.getElementById('tahunanBody');
+  const empty = document.getElementById('emptyTahunan');
+  const bar = document.getElementById('tahunanTotalBar');
+  const badge = document.getElementById('tahunanCountBadge');
+  badge.textContent = years.length + ' Tahun';
+  body.innerHTML = '';
+  let totalPajak=0, totalOpsen=0;
+  years.forEach(y=>{
+    const d = byYear[y];
+    totalPajak += d.pajak;
+    totalOpsen += d.opsen;
+    body.innerHTML += `<tr><td>${y}</td><td>${d.count}</td><td>${d.volume.toLocaleString('id-ID')}</td><td>${formatRupiah(d.pajak)}</td><td>${formatRupiah(d.opsen)}</td><td><b>${formatRupiah(d.pajak+d.opsen)}</b></td></tr>`;
+  });
+  if(years.length){
+    empty.style.display = 'none';
+    bar.style.display = 'flex';
+    document.getElementById('tahunanTotalValue').textContent = formatRupiah(totalPajak+totalOpsen) + ' (Pajak: ' + formatRupiah(totalPajak) + ' · Opsen: ' + formatRupiah(totalOpsen) + ')';
+  } else {
+    empty.style.display = 'block';
+    bar.style.display = 'none';
+  }
+}
+
+function exportTahunanExcel(){
+  const flat = flattenEntries().filter(r=>r.item && r.item.periode);
+  const byYear = {};
+  flat.forEach(r=>{
+    const y = r.item.periode.slice(0,4);
+    if(!byYear[y]) byYear[y] = {count:0, volume:0, pajak:0, opsen:0};
+    byYear[y].count++; byYear[y].volume += r.item.calc.volume; byYear[y].pajak += r.item.calc.pajakTerutang; byYear[y].opsen += r.item.calc.opsenTerutang;
+  });
+  const years = Object.keys(byYear).sort((a,b)=> a.localeCompare(b));
+  const rows = years.map(y=>({
+    'Tahun': y,
+    'Jumlah Laporan': byYear[y].count,
+    'Total Volume (M3)': byYear[y].volume,
+    'Total Pajak (Rp)': Math.round(byYear[y].pajak),
+    'Total Opsen MBLB (Rp)': Math.round(byYear[y].opsen),
+    'Total Tagihan Pajak+Opsen (Rp)': Math.round(byYear[y].pajak + byYear[y].opsen)
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:16},{wch:16},{wch:18},{wch:20},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan Tahunan');
+  XLSX.writeFile(wb, 'laporan-tahunan-mblb.xlsx');
+}
+
+// init
+(function(){
+  populateJenisSelect();
+  initMap();
+  loadEntries();
+  renderTable();
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('fTanggal').value = today;
+  document.getElementById('fTarif').value = DEFAULT_TARIF;
+  document.getElementById('fOpsenTarif').value = DEFAULT_OPSEN_TARIF;
+  onJenisChange();
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW gagal:', err));
+  });
+}
+
+</script>
+  <script src="./warkop-sync.js"></script>
+</body>
+</html>
