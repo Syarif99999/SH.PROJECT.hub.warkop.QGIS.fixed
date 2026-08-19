@@ -351,7 +351,8 @@
         Siapkan file Excel dengan kolom persis: <b>NOP, Nama WP, NIK, Alamat WP, Kecamatan, Alamat Objek Pajak, Tahun, Jumlah, Status, Tanggal Bayar, Lat, Lng</b>.<br>
         Kolom <b>NIK</b> opsional — isi kalau mau mengaitkan beberapa bidang tanah milik pemilik yang sama.<br>
         Kolom <b>Alamat WP</b> = alamat domisili wajib pajak (opsional). Kolom <b>Kecamatan</b> = salah satu dari 10 kecamatan Kabupaten Paser (boleh kosong, nanti otomatis dideteksi dari Lat/Lng kalau diisi). Kolom <b>Alamat Objek Pajak</b> = alamat/lokasi tanah yang kena pajak.<br>
-        Kolom <b>Status</b> isi "Lunas" atau "Belum". Kolom <b>Tanggal Bayar</b> format YYYY-MM-DD, isi hanya kalau sudah lunas — ini yang dipakai untuk rekap per bulan di tab Laporan. Kolom <b>Lat</b>/<b>Lng</b> opsional.
+        Kolom <b>Status</b> isi "Lunas" atau "Belum". Kolom <b>Tanggal Bayar</b> format YYYY-MM-DD, isi hanya kalau sudah lunas — ini yang dipakai untuk rekap per bulan di tab Laporan. Kolom <b>Lat</b>/<b>Lng</b> opsional.<br>
+        <span style="color:var(--red);">Penting untuk kolom <b>NOP</b> &amp; <b>NIK</b>:</span> di file Excel-nya, format kolom itu jadi <b>Text</b> (bukan Number/General) sebelum diisi. Kalau dibiarkan Number, Excel bisa membulatkan angka panjang (18 digit) dan sebagian digitnya hilang/berubah jadi notasi ilmiah (contoh: 6.4E+17) sebelum sempat diimport.
       </p>
       <label>Pilih File Excel (.xlsx)</label>
       <input type="file" id="importFile" accept=".xlsx,.xls" onchange="handleImportFile(event)">
@@ -1264,29 +1265,88 @@ function exportExcel(){
 
 // ----- Import Excel (data awal) -----
 let pendingImport = [];
+
+// Cocokkan nama kolom Excel meski beda spasi/huruf besar-kecil, dan terima beberapa alias umum.
+function normalizeHeaderKey(s){
+  return String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+const IMPORT_FIELD_ALIASES = {
+  nop: ['nop', 'no nop', 'nomor objek pajak'],
+  nama: ['nama wp', 'nama', 'nama wajib pajak'],
+  nik: ['nik', 'no nik'],
+  alamat_wp: ['alamat wp', 'alamat wajib pajak'],
+  kecamatan_raw: ['kecamatan'],
+  alamat: ['alamat objek pajak', 'alamat op', 'alamat'],
+  tahun: ['tahun', 'tahun pajak'],
+  jumlah: ['jumlah', 'jumlah pbb', 'nominal', 'jumlah bayar'],
+  status: ['status', 'status bayar'],
+  tgl_bayar: ['tanggal bayar', 'tgl bayar', 'tanggal'],
+  lat: ['lat', 'latitude'],
+  lng: ['lng', 'long', 'longitude']
+};
+function buildFieldGetter(sampleRow){
+  // Peta: nama kolom asli di Excel -> key ternormalisasi
+  const actualKeys = Object.keys(sampleRow||{});
+  const normToActual = {};
+  actualKeys.forEach(k=> normToActual[normalizeHeaderKey(k)] = k);
+  const getterMap = {};
+  Object.keys(IMPORT_FIELD_ALIASES).forEach(field=>{
+    const alias = IMPORT_FIELD_ALIASES[field].find(a=> normToActual[a]);
+    getterMap[field] = alias ? normToActual[alias] : null;
+  });
+  return (row, field)=> getterMap[field]!=null ? row[getterMap[field]] : '';
+}
+
 function handleImportFile(evt){
   const file = evt.target.files[0];
   if(!file) return;
+  if(typeof XLSX === 'undefined'){
+    showToast('⚠ Library pembaca Excel belum termuat. Cek koneksi internet lalu muat ulang halaman.');
+    document.getElementById('importFile').value='';
+    return;
+  }
   showToast(`Membaca file (${(file.size/1024/1024).toFixed(1)} MB)... mohon tunggu, jangan tutup halaman`);
   const reader = new FileReader();
+  reader.onerror = ()=>{
+    showToast('⚠ Gagal membaca file. Coba pilih ulang file Excel-nya.');
+    document.getElementById('importFile').value='';
+  };
   reader.onload = e=>{
-    const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+    let rows;
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+      if(!wb.SheetNames.length) throw new Error('Workbook tidak punya sheet.');
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      // raw:false -> ambil teks yang tampil di Excel (menghindari NOP/NIK panjang jadi notasi ilmiah/kepotong)
+      rows = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
+    }catch(err){
+      console.error('Gagal parse Excel import awal:', err);
+      showToast('⚠ File tidak bisa dibaca sebagai Excel (.xlsx/.xls). Pastikan file tidak rusak/terkunci password, dan bukan hasil rename dari format lain.');
+      document.getElementById('importFile').value='';
+      return;
+    }
+
+    if(!rows.length){
+      showToast('⚠ Sheet pertama kosong (tidak ada baris data di bawah header).');
+      document.getElementById('importFile').value='';
+      return;
+    }
+
+    const get = buildFieldGetter(rows[0]);
     pendingImport = rows.map(r=>({
       id: 'imp-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),
-      nop: String(r['NOP']||'').trim(),
-      nama: String(r['Nama WP']||'').trim(),
-      nik: String(r['NIK']||'').trim(),
-      alamat_wp: String(r['Alamat WP']||'').trim(),
-      kecamatan_raw: String(r['Kecamatan']||'').trim(),
-      alamat: String(r['Alamat Objek Pajak']||r['Alamat']||'').trim(),
-      tahun: parseInt(r['Tahun']) || new Date().getFullYear(),
-      jumlah: parseFloat(r['Jumlah']) || 0,
-      status: /lunas/i.test(String(r['Status']||'')) ? 'lunas' : 'belum',
-      tgl_bayar: String(r['Tanggal Bayar']||'').trim() || null,
-      lat: r['Lat']!=='' && !isNaN(parseFloat(r['Lat'])) ? parseFloat(r['Lat']) : null,
-      lng: r['Lng']!=='' && !isNaN(parseFloat(r['Lng'])) ? parseFloat(r['Lng']) : null,
+      nop: String(get(r,'nop')||'').trim(),
+      nama: String(get(r,'nama')||'').trim(),
+      nik: String(get(r,'nik')||'').trim(),
+      alamat_wp: String(get(r,'alamat_wp')||'').trim(),
+      kecamatan_raw: String(get(r,'kecamatan_raw')||'').trim(),
+      alamat: String(get(r,'alamat')||'').trim(),
+      tahun: parseInt(get(r,'tahun')) || new Date().getFullYear(),
+      jumlah: parseFloat(String(get(r,'jumlah')).replace(/[^0-9.-]/g,'')) || 0,
+      status: /lunas/i.test(String(get(r,'status')||'')) ? 'lunas' : 'belum',
+      tgl_bayar: String(get(r,'tgl_bayar')||'').trim() || null,
+      lat: get(r,'lat')!=='' && !isNaN(parseFloat(get(r,'lat'))) ? parseFloat(get(r,'lat')) : null,
+      lng: get(r,'lng')!=='' && !isNaN(parseFloat(get(r,'lng'))) ? parseFloat(get(r,'lng')) : null,
       petugas_nama: petugasNama,
       updated_at: new Date().toISOString()
     })).filter(r=>r.nop || r.nama);
@@ -1299,6 +1359,15 @@ function handleImportFile(evt){
 
     const box = document.getElementById('importPreview');
     box.style.display='block';
+
+    if(!pendingImport.length){
+      const detectedCols = Object.keys(rows[0]).join(', ');
+      box.innerHTML = `<p class="hint-note">⚠ Tidak ada baris yang cocok. Kolom terdeteksi di file: <b>${escapeHtml(detectedCols)}</b>.<br>Pastikan minimal kolom <b>NOP</b> atau <b>Nama WP</b> ada dan header-nya persis di baris pertama sheet.</p>`;
+      document.getElementById('btnConfirmImport').style.display = 'none';
+      showToast('⚠ 0 baris cocok — cek nama kolom di file Excel-nya');
+      return;
+    }
+
     let html = `<table><thead><tr><th>NOP</th><th>Nama</th><th>Alamat WP</th><th>Kecamatan</th><th>Alamat Objek Pajak</th><th>Status</th></tr></thead><tbody>`;
     pendingImport.slice(0,50).forEach(r=>{
       html += `<tr><td>${escapeHtml(r.nop)}</td><td>${escapeHtml(r.nama)}</td><td>${escapeHtml(r.alamat_wp)}</td><td>${escapeHtml(r.kecamatan||'-')}</td><td>${escapeHtml(r.alamat)}</td><td>${r.status==='lunas'?'Lunas':'Belum'}</td></tr>`;
@@ -1445,14 +1514,32 @@ let bankRawAOA = []; // array of array, baris mentah sebelum ditentukan mana hea
 function handleBankFile(evt){
   const file = evt.target.files[0];
   if(!file) return;
+  if(typeof XLSX === 'undefined'){
+    showToast('⚠ Library pembaca Excel belum termuat. Cek koneksi internet lalu muat ulang halaman.');
+    document.getElementById('bankFile').value='';
+    return;
+  }
   showToast(`Membaca file (${(file.size/1024/1024).toFixed(1)} MB)... mohon tunggu, jangan tutup halaman`);
   const reader = new FileReader();
+  reader.onerror = ()=>{
+    showToast('⚠ Gagal membaca file. Coba pilih ulang file Excel-nya.');
+    document.getElementById('bankFile').value='';
+  };
   reader.onload = e=>{
-    const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+    let wb, aoa;
+    try{
+      wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+      if(!wb.SheetNames.length) throw new Error('Workbook tidak punya sheet.');
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', blankrows:false});
+    }catch(err){
+      console.error('Gagal parse Excel bank:', err);
+      showToast('⚠ File tidak bisa dibaca sebagai Excel (.xlsx/.xls). Pastikan file tidak rusak/terkunci password.');
+      document.getElementById('bankFile').value='';
+      return;
+    }
     bankWorkbook = wb;
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', blankrows:false});
-    if(!aoa.length){ showToast('File kosong atau tidak terbaca'); return; }
+    if(!aoa.length){ showToast('⚠ File kosong atau tidak terbaca'); document.getElementById('bankFile').value=''; return; }
     bankRawAOA = aoa;
 
     const box = document.getElementById('bankRowPickerBox');
