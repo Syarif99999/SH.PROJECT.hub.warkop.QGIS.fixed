@@ -1,0 +1,25 @@
+{
+  "name": "WARKOP - Wadah Aplikasi Pajak Daerah BAPENDA Paser",
+  "short_name": "WARKOP",
+  "description": "Menu utama seluruh aplikasi pendataan pajak daerah BAPENDA Kabupaten Paser: Reklame, Hotel, Restoran, Kesenian & Hiburan, MBLB, Opsen PKB/BBNKB, Parkir, Walet, dan Alamat WPOP.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f4ee",
+  "theme_color": "#0f2647",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

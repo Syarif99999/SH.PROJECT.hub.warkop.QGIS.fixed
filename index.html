@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WARKOP - Wadah Aplikasi Pajak Daerah BAPENDA Paser</title>
+
+<!-- PWA config -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2647">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WARKOP">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
+<style>
+  :root{
+    --navy:#0f2647;
+    --navy2:#173763;
+    --gold:#c8952c;
+    --paper:#f6f4ee;
+    --ink:#1c2430;
+    --line:#dcd6c8;
+    --green:#2f6b4f;
+    --red:#a8352b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy),var(--navy2));
+    color:#fff;
+    padding:24px 18px 20px 18px;
+    text-align:center;
+  }
+  header .badge{
+    display:inline-block;background:var(--gold);color:var(--navy);
+    font-weight:700;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;
+    padding:4px 10px;border-radius:20px;margin-bottom:10px;
+  }
+  header h1{margin:0 0 4px 0;font-size:1.5rem;letter-spacing:.5px;}
+  header p{margin:0;font-size:.82rem;opacity:.85;}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 16px 40px 16px;}
+
+  /* ===== AREA INSTAL APLIKASI ===== */
+  @keyframes pulseIn{
+    from{opacity:0;transform:translateY(-6px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .install-banner{
+    display:none;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;gap:12px;
+    background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;
+    border:1px solid rgba(200,149,44,.45);border-radius:14px;
+    padding:13px 14px;margin:4px 0 18px 0;
+    box-shadow:0 6px 18px rgba(15,38,71,.14);
+    animation:pulseIn .35s ease;
+  }
+  .install-banner.show{display:grid;}
+  .install-icon{
+    width:40px;height:40px;border-radius:11px;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.12);font-size:1.25rem;
+  }
+  .install-copy{min-width:0;}
+  .install-copy strong{display:block;font-size:.86rem;margin-bottom:2px;}
+  .install-copy span{display:block;font-size:.72rem;line-height:1.4;opacity:.82;}
+  .install-action{
+    background:var(--gold);color:var(--navy);border:none;border-radius:8px;
+    min-height:38px;padding:9px 14px;font-weight:700;font-size:.76rem;
+    cursor:pointer;white-space:nowrap;transition:transform .1s,filter .15s;
+  }
+  .install-action:hover{filter:brightness(1.08);}
+  .install-action:active{transform:scale(.96);}
+  .install-action:focus-visible{outline:3px solid #fff;outline-offset:2px;}
+  @media(max-width:420px){
+    .install-banner{grid-template-columns:auto minmax(0,1fr);padding:12px;gap:10px;}
+    .install-action{grid-column:1 / -1;width:100%;margin-top:2px;min-height:42px;}
+  }
+
+  /* ===== LOGIN GATE ===== */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(15,38,71,.55);
+    display:none;align-items:center;justify-content:center;padding:16px;z-index:2000;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:#fff;border-radius:14px;padding:26px 22px;max-width:380px;width:100%;
+    box-shadow:0 10px 40px rgba(0,0,0,.25);
+    transition:transform .12s ease;
+  }
+  .modal-box.shake{animation:shakeErr .4s;}
+  @keyframes shakeErr{
+    10%,90%{transform:translateX(-2px);}
+    20%,80%{transform:translateX(4px);}
+    30%,50%,70%{transform:translateX(-8px);}
+    40%,60%{transform:translateX(8px);}
+  }
+  .lock-icon{
+    width:54px;height:54px;border-radius:50%;background:var(--navy);
+    display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+    margin:0 auto 14px auto;
+  }
+  .section-title{
+    font-size:1.02rem;font-weight:700;color:var(--navy);text-align:center;margin:0 0 4px 0;
+  }
+  .modal-sub{font-size:.8rem;color:#666;text-align:center;margin:0 0 18px 0;}
+  label{display:block;font-size:.75rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+  .pw-row{position:relative;margin-bottom:6px;}
+  input[type=password], input[type=text]{
+    width:100%;padding:12px 42px 12px 12px;border:2px solid var(--line);border-radius:8px;
+    font-size:1rem;outline:none;transition:border-color .15s;
+  }
+  input[type=password]:focus, input[type=text]:focus{border-color:var(--navy);}
+  input.field-ok{border-color:var(--green);}
+  input.field-bad{border-color:var(--red);}
+  .pw-eye{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    background:none;border:none;font-size:1.1rem;cursor:pointer;padding:6px;
+  }
+  .feedback-msg{font-size:.8rem;font-weight:600;margin:8px 0 0 0;display:none;align-items:center;gap:6px;}
+  .feedback-msg.bad{color:var(--red);display:flex;}
+  .feedback-msg.ok{color:var(--green);display:flex;}
+  .btn{
+    width:100%;padding:13px;border:none;border-radius:8px;font-size:.95rem;font-weight:700;
+    cursor:pointer;margin-top:14px;transition:opacity .15s;
+  }
+  .btn-navy{background:var(--navy);color:#fff;}
+  .btn-navy:disabled{opacity:.6;cursor:default;}
+  .btn-navy:active{opacity:.85;}
+  .hint-note{font-size:.72rem;color:#888;text-align:center;margin:12px 0 0 0;}
+
+  /* ===== MENU GRID ===== */
+  #menuScreen{display:none;}
+  .logout-area{
+    display:flex;justify-content:center;margin:22px 0 0;padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .logout-btn{
+    width:100%;max-width:240px;min-height:42px;
+    background:#fff;border:1px solid var(--line);color:var(--navy);
+    font-size:.78rem;font-weight:700;padding:9px 16px;border-radius:10px;cursor:pointer;
+    transition:border-color .15s,background .15s,transform .1s;
+  }
+  .logout-btn:hover{border-color:var(--navy);background:#f1f3f6;}
+  .logout-btn:active{transform:scale(.98);}
+  .logout-btn:focus-visible{outline:3px solid rgba(15,38,71,.25);outline-offset:2px;}
+  .menu-intro{text-align:center;margin:6px 0 20px 0;}
+  .menu-intro h2{font-size:1.05rem;color:var(--navy);margin:0 0 4px 0;}
+  .menu-intro p{font-size:.8rem;color:#666;margin:0;}
+  .menu-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
+  }
+  @media(min-width:520px){ .menu-grid{grid-template-columns:repeat(3,1fr);} }
+  .menu-card{
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:16px 10px;text-align:center;text-decoration:none;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    transition:transform .1s, box-shadow .1s;
+  }
+  .menu-card:active{transform:scale(.97);}
+  .menu-card:hover{box-shadow:0 4px 14px rgba(15,38,71,.12);border-color:var(--gold);}
+  .menu-card .ic{
+    width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--navy2));
+    display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+  }
+  .menu-card .lbl{font-size:.78rem;font-weight:700;color:var(--navy);line-height:1.25;}
+  .menu-card .sub{font-size:.65rem;color:#888;}
+  footer{text-align:center;font-size:.68rem;color:#999;padding:24px 16px 10px 16px;}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN GATE ===================== -->
+<div class="modal-overlay show" id="loginGate">
+  <div class="modal-box" id="loginBox">
+    <div class="lock-icon">🔒</div>
+    <p class="section-title">Login Petugas</p>
+    <p class="modal-sub">Masukkan password bersama untuk mengakses seluruh aplikasi pajak BAPENDA Kabupaten Paser.</p>
+    <label>Password</label>
+    <div class="pw-row">
+      <input type="password" id="loginPassword" placeholder="Masukkan password" autocomplete="off"
+             onkeydown="if(event.key==='Enter') doLogin();" oninput="clearFieldState()">
+      <button type="button" class="pw-eye" id="pwEyeBtn" onclick="togglePasswordVisibility()" aria-label="Tampilkan/sembunyikan password">👁️</button>
+    </div>
+    <p class="feedback-msg" id="fbMsg"></p>
+    <button class="btn btn-navy" id="loginBtn" onclick="doLogin()">🔓 Masuk</button>
+    <p class="hint-note">Aplikasi ini khusus untuk petugas BAPENDA Kabupaten Paser.</p>
+  </div>
+</div>
+
+<!-- ===================== MENU SCREEN ===================== -->
+<div id="menuScreen">
+  <header>
+    <span class="badge">BAPENDA Kabupaten Paser</span>
+    <h1>🗂️ WARKOP</h1>
+    <p>Wadah Aplikasi Pajak &amp; Retribusi Daerah</p>
+  </header>
+  <div class="wrap">
+    <!-- Satu-satunya area instalasi; tampil saat browser siap memasang PWA. -->
+    <div class="install-banner" id="installBanner" role="status" aria-label="Instal aplikasi WARKOP">
+      <div class="install-icon" aria-hidden="true">📲</div>
+      <div class="install-copy">
+        <strong>Pasang WARKOP</strong>
+        <span>Akses lebih cepat langsung dari layar utama perangkat.</span>
+      </div>
+      <button type="button" class="install-action" onclick="handleInstallClick()">Instal Aplikasi</button>
+    </div>
+
+    <div class="menu-intro">
+      <h2>Pilih Jenis Pajak / Aplikasi</h2>
+      <p>Tap salah satu menu di bawah untuk mulai mendata di lapangan.</p>
+    </div>
+    <div class="menu-grid">
+      <a class="menu-card" href="reklame/index.html">
+        <div class="ic">📢</div>
+        <div class="lbl">Pajak Reklame</div>
+        <div class="sub">PBJT Reklame</div>
+      </a>
+      <a class="menu-card" href="hotel/index.html">
+        <div class="ic">🏨</div>
+        <div class="lbl">Pajak Hotel</div>
+        <div class="sub">PBJT Hotel</div>
+      </a>
+      <a class="menu-card" href="restoran/index.html">
+        <div class="ic">🍽️</div>
+        <div class="lbl">Pajak Restoran</div>
+        <div class="sub">PBJT Restoran</div>
+      </a>
+      <a class="menu-card" href="kesenian-hiburan/index.html">
+        <div class="ic">🎭</div>
+        <div class="lbl">Kesenian &amp; Hiburan</div>
+        <div class="sub">PBJT Kesenian/Hiburan</div>
+      </a>
+      <a class="menu-card" href="mblb/index.html">
+        <div class="ic">⛏️</div>
+        <div class="lbl">Pajak MBLB</div>
+        <div class="sub">Termasuk Opsen 25%</div>
+      </a>
+      <a class="menu-card" href="pkn-bbnkb/index.html">
+        <div class="ic">🚗</div>
+        <div class="lbl">Opsen PKB/BBNKB</div>
+        <div class="sub">Surcharge Kendaraan</div>
+      </a>
+      <a class="menu-card" href="parkir/index.html">
+        <div class="ic">🅿️</div>
+        <div class="lbl">Pajak Parkir</div>
+        <div class="sub">Pendataan Parkir</div>
+      </a>
+      <a class="menu-card" href="walet/index.html">
+        <div class="ic">🐦</div>
+        <div class="lbl">Sarang Burung Walet</div>
+        <div class="sub">Pajak Walet</div>
+      </a>
+      <a class="menu-card" href="alamat-wpop/index.html">
+        <div class="ic">📍</div>
+        <div class="lbl">Alamat WPOP</div>
+        <div class="sub">Basis Data Alamat</div>
+      </a>
+    </div>
+
+    <div class="logout-area">
+      <button type="button" class="logout-btn" onclick="doLogout()">🔓 Keluar dari WARKOP</button>
+    </div>
+  </div>
+  <footer>WARKOP &middot; BAPENDA Kabupaten Paser &middot; Data tersimpan offline di perangkat masing-masing aplikasi</footer>
+</div>
+
+<script>
+// ============ KONFIGURASI PASSWORD ============
+// Ganti nilai di bawah ini kapan saja untuk mengubah password bersama.
+const HUB_PASSWORD = "paser2026";
+const AUTH_KEY = "warkopHubAuth";
+
+// ============ CEK SESI TERSIMPAN ============
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem(AUTH_KEY) === 'true') {
+    showMenu();
+  }
+  document.getElementById('loginPassword').focus();
+});
+
+function togglePasswordVisibility(){
+  const inp = document.getElementById('loginPassword');
+  const btn = document.getElementById('pwEyeBtn');
+  const showing = inp.type === 'password';
+  inp.type = showing ? 'text' : 'password';
+  btn.textContent = showing ? '🙈' : '👁️';
+}
+
+function clearFieldState(){
+  const inp = document.getElementById('loginPassword');
+  inp.classList.remove('field-ok','field-bad');
+  const fb = document.getElementById('fbMsg');
+  fb.className = 'feedback-msg';
+  fb.textContent = '';
+}
+
+function doLogin(){
+  const inp = document.getElementById('loginPassword');
+  const fb = document.getElementById('fbMsg');
+  const box = document.getElementById('loginBox');
+  const btn = document.getElementById('loginBtn');
+  const pw = inp.value;
+
+  if(!pw){
+    inp.classList.add('field-bad');
+    fb.className = 'feedback-msg bad';
+    fb.textContent = '⚠ Password tidak boleh kosong.';
+    inp.focus();
+    return;
+  }
+
+  btn.disabled = true;
+
+  // Sedikit jeda supaya terasa "diperiksa" (tetap instan, tidak butuh koneksi)
+  setTimeout(() => {
+    if(pw === HUB_PASSWORD){
+      inp.classList.remove('field-bad');
+      inp.classList.add('field-ok');
+      fb.className = 'feedback-msg ok';
+      fb.textContent = '✅ Password benar, membuka aplikasi...';
+      localStorage.setItem(AUTH_KEY, 'true');
+      setTimeout(() => {
+        document.getElementById('loginGate').classList.remove('show');
+        showMenu();
+      }, 450);
+    } else {
+      inp.classList.remove('field-ok');
+      inp.classList.add('field-bad');
+      fb.className = 'feedback-msg bad';
+      fb.textContent = '❌ Password salah, silakan coba lagi.';
+      box.classList.remove('shake');
+      void box.offsetWidth; // reset animasi
+      box.classList.add('shake');
+      inp.value = '';
+      inp.focus();
+      btn.disabled = false;
+    }
+  }, 250);
+}
+
+function showMenu(){
+  document.getElementById('loginGate').classList.remove('show');
+  document.getElementById('menuScreen').style.display = 'block';
+}
+
+function doLogout(){
+  localStorage.removeItem(AUTH_KEY);
+  document.getElementById('menuScreen').style.display = 'none';
+  document.getElementById('loginPassword').value = '';
+  clearFieldState();
+  document.getElementById('loginBtn').disabled = false;
+  document.getElementById('loginGate').classList.add('show');
+  document.getElementById('loginPassword').focus();
+}
+
+// ============ REGISTER SERVICE WORKER ============
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.error('SW gagal:', err));
+  });
+}
+
+// ============ INSTAL KE HP / KOMPUTER (PWA) ============
+let deferredInstallPrompt = null;
+const installBanner = document.getElementById('installBanner');
+
+function isIOSDevice(){
+  return /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()) && !window.MSStream;
+}
+
+function isRunningStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function showInstallUI(){
+  if (isRunningStandalone()) return; // sudah terpasang, jangan tampilkan lagi
+  installBanner.classList.add('show');
+}
+
+function hideInstallUI(){
+  installBanner.classList.remove('show');
+}
+
+// Chrome / Edge / Android: browser akan fire event ini kalau syarat PWA terpenuhi
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallUI();
+});
+
+// Setelah berhasil terpasang
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  hideInstallUI();
+});
+
+async function handleInstallClick(){
+  if (deferredInstallPrompt){
+    // Jalur normal Android/Chrome/Edge/desktop Chrome
+    hideInstallUI();
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    return;
+  }
+  if (isIOSDevice()){
+    alert(
+      "Cara instal di iPhone/iPad (Safari):\n\n" +
+      "1. Tap ikon Share (kotak dengan panah ke atas) di bar bawah/atas Safari\n" +
+      "2. Scroll lalu pilih 'Add to Home Screen' / 'Tambah ke Layar Utama'\n" +
+      "3. Tap 'Add' / 'Tambah'\n\n" +
+      "Catatan: harus dibuka lewat Safari, bukan Chrome, supaya opsi ini muncul."
+    );
+    return;
+  }
+  // Fallback kalau prompt belum siap tapi tombol tetap kelihatan (browser lain)
+  alert("Buka menu browser (⋮ atau ikon Share) lalu pilih 'Instal aplikasi' atau 'Tambahkan ke layar utama'.");
+}
+
+// Kalau di iOS dan belum berjalan sebagai app terpasang, tampilkan tombol
+// (karena iOS Safari tidak pernah mengirim event beforeinstallprompt)
+window.addEventListener('DOMContentLoaded', () => {
+  if (isIOSDevice() && !isRunningStandalone()){
+    showInstallUI();
+  }
+});
+</script>
+</body>
+</html>
